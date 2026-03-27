@@ -331,29 +331,39 @@ cmake --build .
 
 ---
 
-## 八、Z-Index 分層規則（已確認）
+## 八、Z-Index 分層規則（已修正 2026-03-25）
+
+> [!CAUTION]
+> **⚠️ PTSD Z-Index 硬性限制：nearClip = -100, farClip = 100**
+>
+> `TransformUtils.cpp` 將 `zIndex` 直接作為 3D Z 座標：
+> ```cpp
+> constexpr float nearClip = -100;
+> constexpr float farClip  = 100;
+> auto model = glm::translate(eye, {transform.translation, zIndex}) * ...
+> ```
+> **Z > 100 或 Z < -100 的物件會被 GPU 裁剪，完全不可見！**
+> 所有 Z-Index 值必須嚴格在 `(-100, 100)` 範圍內。
 
 | 物件類型 | Z-Index 策略 | 具體值 |
 |---------|------------|--------|
 | 地板 Tile | 固定 | `0.0f` |
 | 地板裝飾（血跡等） | 固定 | `1.0f` |
-| 掉落物、Pickup | 動態 Y-Sorting | `1000 - worldY` |
-| 敵人 | 動態 Y-Sorting | `1000 - worldY` |
-| 玩家 | 動態 Y-Sorting | `1000 - worldY` |
-| 牆壁（具立體感，南側） | 動態 Y-Sorting | `1000 - worldY` |
-| 子彈 | 固定 | `199.0f` |
-| HUD / UI | 固定 | `200.0f` |
+| WallTile（上/左/右牆）| 固定 | `0.5f` |
+| NorthFaceTile | 固定 | `0.6f` |
+| 掉落物、Pickup | 動態 Y-Sorting | `clamp(50 - worldY/6, 2, 98)` |
+| 敵人 | 動態 Y-Sorting | `clamp(50 - worldY/6, 2, 98)` |
+| 玩家 | 動態 Y-Sorting | `clamp(50 - worldY/6, 2, 98)` |
+| SouthFaceTile（南牆面）| 動態 Y-Sorting | `clamp(50 - worldY/6, 2, 98)` |
+| 子彈 | 固定 | `99.0f` |
+| HUD / UI | 固定 | `99.5f` |
 
-> [!IMPORTANT]
-> **⚠️ 子彈必須固定在 `199.0f`，不得使用 `50.0f`。**
-> Y-Sorting 動態範圍是 `[2.0f, 198.0f]`。若子彈設為 50.0f，玩家/敵人在畫面下方時（Z 接近 198）會把子彈「蓋住」，
-> 視覺上子彈穿入身體背後——這是嚴重的視覺錯誤。`199.0f` 確保子彈永遠渲染在所有 Y-Sort 實體之上。
-
-**Y-Sorting 公式（已確認）**：
+**Y-Sorting 公式（已修正）**：
 ```cpp
 void Entity::UpdateZIndex() {
-    // Y 越小（畫面越下方）→ Z 越大（越前面）
-    SetZIndex(glm::clamp(1000.0f - m_Transform.translation.y, 2.0f, 198.0f));
+    // ⚠️ 必須使用 m_WorldPos.y，不得用 m_Transform.translation.y！
+    // worldY ≈ +288（北側）→ Z ≈ 2（後面）；worldY ≈ -288（南側）→ Z ≈ 98（前面）
+    SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f));
 }
 ```
 

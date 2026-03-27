@@ -1,150 +1,155 @@
-# 素材複製腳本 — Soul Knight
-# 從 1.07/Sprite/ 複製必要素材到 Resources/ 各子目錄
-# 使用方式：在 PowerShell 中執行，工作目錄設為 d:\Soul Knight\project\
+# copy_assets.ps1 -- Soul Knight Step 1.1
+# Copies required sprites from 1.07/Sprite/ to Resources/ subdirectories.
+# Prints a missing-file audit report at the end.
 #
-# 使用方式：
+# Usage:
 #   cd "d:\Soul Knight\project"
-#   .\copy_assets.ps1
+#   powershell -ExecutionPolicy Bypass -File copy_assets.ps1
 
 $ErrorActionPreference = "Stop"
 
-# ── 路徑設定 ──────────────────────────────────────────────────────────────────
-$srcDir = "d:\Soul Knight\project\1.07\Sprite"
-$dstRoot = "d:\Soul Knight\project\Resources"
+$srcDir    = "d:\Soul Knight\project\1.07\Sprite"
+$srcRoot   = "d:\Soul Knight\project\1.07"
+$dstRoot   = "d:\Soul Knight\project\Resources"
 
-# ── 建立目標子目錄 ──────────────────────────────────────────────────────────────
-Write-Host "=== 建立 Resources 目錄結構 ===" -ForegroundColor Cyan
-
-$dirs = @(
-    "$dstRoot\Characters",
-    "$dstRoot\Tiles",
-    "$dstRoot\Enemies",
-    "$dstRoot\Bullets",
-    "$dstRoot\Boss",
-    "$dstRoot\Objects",
-    "$dstRoot\UI"
-)
-foreach ($dir in $dirs) {
-    if (-not (Test-Path $dir)) {
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        Write-Host "  建立: $dir" -ForegroundColor Green
+# ---------- 1. Create subdirectories ----------------------------------------
+$subDirs = @("Characters","Tiles","Enemies","Bullets","Boss","Objects","UI","Weapons")
+Write-Host "=== Creating Resources subdirectories ===" -ForegroundColor Cyan
+foreach ($d in $subDirs) {
+    $path = Join-Path $dstRoot $d
+    if (-not (Test-Path $path)) {
+        New-Item -ItemType Directory -Path $path -Force | Out-Null
+        Write-Host "  [NEW] $d" -ForegroundColor Green
     } else {
-        Write-Host "  已存在: $dir" -ForegroundColor Gray
+        Write-Host "  [OK ] $d already exists" -ForegroundColor Gray
     }
 }
 
-# ── 複製函式（含錯誤回報）───────────────────────────────────────────────────────
+# ---------- 2. Helper: copy single file if destination missing ---------------
 function Copy-Asset {
-    param(
-        [string]$FileName,
-        [string]$DestDir
-    )
-    $src = Join-Path $srcDir $FileName
-    $dst = Join-Path $DestDir $FileName
-    if (Test-Path $src) {
-        Copy-Item -Path $src -Destination $dst -Force
-        Write-Host "  ✅ $FileName" -ForegroundColor Green
-    } else {
-        Write-Host "  ❌ 找不到：$src" -ForegroundColor Red
+    param([string]$Src, [string]$Dst, [string]$Label)
+    if (-not (Test-Path $Dst)) {
+        if (Test-Path $Src) {
+            Copy-Item -Path $Src -Destination $Dst -Force
+            Write-Host "  [COPY] $Label" -ForegroundColor Green
+        } else {
+            Write-Host "  [MISS] $Label  (src: $Src)" -ForegroundColor Red
+        }
+    }
+    # silently skip if already exists
+}
+
+# ---------- 3. Characters -- c01, c02, c03 (frames 0-8) ---------------------
+Write-Host "`n=== Characters ===" -ForegroundColor Cyan
+foreach ($ch in @("c01","c02","c03")) {
+    for ($i = 0; $i -le 8; $i++) {
+        Copy-Asset "$srcDir\${ch}_${i}.png" "$dstRoot\Characters\${ch}_${i}.png" "${ch}_${i}.png"
     }
 }
 
-# ── 角色 c01（M1 Hardcode 使用）────────────────────────────────────────────────
-Write-Host "`n=== 角色 c01（幀 0-8）===" -ForegroundColor Cyan
-for ($i = 0; $i -le 8; $i++) {
-    Copy-Asset "c01_$i.png" "$dstRoot\Characters"
-}
+# ---------- 4. Tiles ---------------------------------------------------------
+Write-Host "`n=== Tiles ===" -ForegroundColor Cyan
+Copy-Asset "$srcDir\f101.png" "$dstRoot\Tiles\f101.png" "f101.png"
+Copy-Asset "$srcDir\w001.png" "$dstRoot\Tiles\w001.png" "w001.png"
+Copy-Asset "$srcDir\w004.png" "$dstRoot\Tiles\w004.png" "w004.png"
 
-# ── 角色 c02、c03（M5 選角用，先一起複製備用）──────────────────────────────────
-Write-Host "`n=== 角色 c02（幀 0-8）===" -ForegroundColor Cyan
-for ($i = 0; $i -le 8; $i++) {
-    Copy-Asset "c02_$i.png" "$dstRoot\Characters"
-}
-Write-Host "`n=== 角色 c03（幀 0-8）===" -ForegroundColor Cyan
-for ($i = 0; $i -le 8; $i++) {
-    Copy-Asset "c03_$i.png" "$dstRoot\Characters"
-}
-
-# ── 地板 Tile（第 1 層）────────────────────────────────────────────────────────
-Write-Host "`n=== 地板 Tile ===" -ForegroundColor Cyan
-Copy-Asset "f101.png" "$dstRoot\Tiles"
-
-# ── 牆壁 Tile（第 1 層，先複製 001-010 涵蓋頂/底/側/角落）────────────────────────
-Write-Host "`n=== 牆壁 Tile (w001-w010) ===" -ForegroundColor Cyan
-for ($i = 1; $i -le 10; $i++) {
-    $name = "w{0:D3}.png" -f $i
-    Copy-Asset $name "$dstRoot\Tiles"
-}
-
-# ── 敵人 enemy22（M2 測試用，7 幀）────────────────────────────────────────────
-Write-Host "`n=== 敵人 enemy22（幀 0-6）===" -ForegroundColor Cyan
+# ---------- 5. Enemies -- enemy22 (frames 0-6) --------------------------------
+Write-Host "`n=== Enemies ===" -ForegroundColor Cyan
 for ($i = 0; $i -le 6; $i++) {
-    Copy-Asset "enemy22_$i.png" "$dstRoot\Enemies"
+    Copy-Asset "$srcDir\enemy22_${i}.png" "$dstRoot\Enemies\enemy22_${i}.png" "enemy22_${i}.png"
 }
 
-# ── Boss boss08（M4 用，8 幀）────────────────────────────────────────────────
-Write-Host "`n=== Boss boss08（幀 0-7）===" -ForegroundColor Cyan
+# ---------- 6. Boss -- boss08 (frames 0-7) ------------------------------------
+Write-Host "`n=== Boss ===" -ForegroundColor Cyan
 for ($i = 0; $i -le 7; $i++) {
-    Copy-Asset "boss08_$i.png" "$dstRoot\Boss"
+    Copy-Asset "$srcDir\boss08_${i}.png" "$dstRoot\Boss\boss08_${i}.png" "boss08_${i}.png"
 }
 
-# ── 傳送陣特效 effect04（M4 用，幀 5-12）────────────────────────────────────────
-Write-Host "`n=== 傳送陣 effect04（幀 5-12）===" -ForegroundColor Cyan
+# ---------- 7. Objects -- effect04 (frames 5-12) -----------------------------
+Write-Host "`n=== Objects (teleporter) ===" -ForegroundColor Cyan
 for ($i = 5; $i -le 12; $i++) {
-    Copy-Asset "effect04_$i.png" "$dstRoot\Objects"
+    Copy-Asset "$srcDir\effect04_${i}.png" "$dstRoot\Objects\effect04_${i}.png" "effect04_${i}.png"
 }
 
-# ── UI 元件（先複製 0-40，血量條等）────────────────────────────────────────────
-Write-Host "`n=== UI 元件（ui_0 - ui_40）===" -ForegroundColor Cyan
-for ($i = 0; $i -le 40; $i++) {
-    Copy-Asset "ui_$i.png" "$dstRoot\UI"
-}
-
-# ── 子彈（先複製 0-20 備用）─────────────────────────────────────────────────────
-Write-Host "`n=== 子彈素材（bullet_0 - bullet_20）===" -ForegroundColor Cyan
+# ---------- 8. UI -- ui_0 to ui_20 + Settlement screen -----------------------
+Write-Host "`n=== UI ===" -ForegroundColor Cyan
 for ($i = 0; $i -le 20; $i++) {
-    Copy-Asset "bullet_$i.png" "$dstRoot\Bullets"
+    Copy-Asset "$srcDir\ui_${i}.png" "$dstRoot\UI\ui_${i}.png" "ui_${i}.png"
 }
+# Settlement screen.png (GameOver / Victory background)
+Copy-Asset "$srcDir\Settlement screen.png" "$dstRoot\UI\Settlement screen.png" "Settlement screen.png"
 
-# ── 哥布林敵方攻擊素材（M2 用）────────────────────────────────────────────────────
-# ⚠️ 這三個素材的原始檔名含中文，直接放在 1.07\ 根目錄（不在 Sprite\ 子目錄）
-# 使用 Get-ChildItem 萬用字元搜尋，再以大小特徵對應目標檔名，避免中文路徑硬編碼。
-Write-Host "`n=== 哥布林攻擊素材（M2 用）===" -ForegroundColor Cyan
+# ---------- 9. Weapons (rename on copy) --------------------------------------
+Write-Host "`n=== Weapons (renamed) ===" -ForegroundColor Cyan
+Copy-Asset "$srcDir\weapons_19.png"  "$dstRoot\Weapons\weapon_pistol.png"  "weapons_19 -> weapon_pistol.png"
+Copy-Asset "$srcDir\weapons_18.png"  "$dstRoot\Weapons\weapon_shotgun.png" "weapons_18 -> weapon_shotgun.png"
+Copy-Asset "$srcDir\weapons2_78.png" "$dstRoot\Weapons\weapon_laser.png"   "weapons2_78 -> weapon_laser.png"
 
-$srcRoot107 = "d:\Soul Knight\project\1.07"
-$bulletDst  = "$dstRoot\Bullets"
+# ---------- 10. Bullets (goblin attack sprites -- in 1.07\ root) -------------
+Write-Host "`n=== Bullets (enemy attack sprites) ===" -ForegroundColor Cyan
 
-# 比對規則：(大小特徵萬用字元, 目標檔名, 說明)
-$goblinAssets = @(
-    @("28px*", "enemy_bullet_pistol.png", "PistolGoblin 圓形子彈"),
-    @("*0.png", "enemy_stab.png",         "SpearGoblin 突刺(突刺动图0)"),
-    @("42px*", "enemy_arrow.png",         "ArcherGoblin 箭矢")
+# Find by glob to avoid hardcoding Chinese filenames in ASCII script
+$bulletMap = @(
+    @{ Pattern = "28px*";  Dst = "$dstRoot\Bullets\enemy_bullet_pistol.png"; Label = "enemy_bullet_pistol.png" }
+    @{ Pattern = "*0.png"; Dst = "$dstRoot\Bullets\enemy_stab.png";          Label = "enemy_stab.png" }
+    @{ Pattern = "42px*";  Dst = "$dstRoot\Bullets\enemy_arrow.png";         Label = "enemy_arrow.png" }
 )
-
-foreach ($entry in $goblinAssets) {
-    $pattern = $entry[0]
-    $dstName = $entry[1]
-    $desc    = $entry[2]
-
-    $found = Get-ChildItem -Path $srcRoot107 -Filter $pattern -File -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($found) {
-        Copy-Item -Path $found.FullName -Destination "$bulletDst\$dstName" -Force
-        Write-Host "  ✅ $desc  ($($found.Name) -> $dstName)" -ForegroundColor Green
-    } else {
-        Write-Host "  ❌ 找不到符合 [$pattern] 的檔案於 $srcRoot107" -ForegroundColor Red
+foreach ($b in $bulletMap) {
+    if (-not (Test-Path $b.Dst)) {
+        $found = Get-ChildItem -Path $srcRoot -Filter $b.Pattern -File -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($found) {
+            Copy-Item -Path $found.FullName -Destination $b.Dst -Force
+            Write-Host "  [COPY] $($b.Label)  (from $($found.Name))" -ForegroundColor Green
+        } else {
+            Write-Host "  [MISS] $($b.Label)  (no file matching $($b.Pattern) in $srcRoot)" -ForegroundColor Red
+        }
     }
 }
 
-
-# ── 完成統計 ───────────────────────────────────────────────────────────────────
-Write-Host "`n=== 複製完成 ===" -ForegroundColor Cyan
-Write-Host "目的地：$dstRoot" -ForegroundColor Yellow
-
-# 統計每個目錄的檔案數
-foreach ($dir in $dirs) {
-    $count = (Get-ChildItem $dir -File -ErrorAction SilentlyContinue).Count
-    $dirName = Split-Path $dir -Leaf
-    Write-Host "  $dirName : $count 個檔案" -ForegroundColor White
+# ---------- 11. Directory summary --------------------------------------------
+Write-Host "`n=== File count per directory ===" -ForegroundColor Cyan
+foreach ($d in $subDirs) {
+    $path  = Join-Path $dstRoot $d
+    $count = (Get-ChildItem $path -File -ErrorAction SilentlyContinue).Count
+    Write-Host ("  {0,-12} : {1} files" -f $d, $count)
 }
 
-Write-Host "`n✅ 素材複製完成！請確認上方沒有 ❌ 錯誤，再回報結果。" -ForegroundColor Green
+# ---------- 12. Full audit: report any missing expected files ----------------
+Write-Host "`n=== Audit Report ===" -ForegroundColor Cyan
+
+$expected = @()
+# Characters
+foreach ($ch in @("c01","c02","c03")) {
+    0..8 | ForEach-Object { $expected += "$dstRoot\Characters\${ch}_${_}.png" }
+}
+# Tiles
+$expected += "$dstRoot\Tiles\f101.png"
+$expected += "$dstRoot\Tiles\w001.png"
+$expected += "$dstRoot\Tiles\w004.png"
+# Enemies
+0..6 | ForEach-Object { $expected += "$dstRoot\Enemies\enemy22_${_}.png" }
+# Boss
+0..7 | ForEach-Object { $expected += "$dstRoot\Boss\boss08_${_}.png" }
+# Objects
+5..12 | ForEach-Object { $expected += "$dstRoot\Objects\effect04_${_}.png" }
+# UI
+0..20 | ForEach-Object { $expected += "$dstRoot\UI\ui_${_}.png" }
+$expected += "$dstRoot\UI\Settlement screen.png"
+# Weapons
+$expected += "$dstRoot\Weapons\weapon_pistol.png"
+$expected += "$dstRoot\Weapons\weapon_shotgun.png"
+$expected += "$dstRoot\Weapons\weapon_laser.png"
+# Bullets
+$expected += "$dstRoot\Bullets\enemy_bullet_pistol.png"
+$expected += "$dstRoot\Bullets\enemy_stab.png"
+$expected += "$dstRoot\Bullets\enemy_arrow.png"
+
+$missing = $expected | Where-Object { -not (Test-Path $_) }
+
+if ($missing.Count -eq 0) {
+    Write-Host "All expected assets present -- OK" -ForegroundColor Green
+} else {
+    Write-Host "MISSING $($missing.Count) file(s):" -ForegroundColor Red
+    $missing | ForEach-Object { Write-Host ("  MISSING: " + $_.Replace($dstRoot, "Resources")) -ForegroundColor Red }
+}
+Write-Host "=== Done ===" -ForegroundColor Cyan

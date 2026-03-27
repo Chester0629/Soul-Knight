@@ -1,6 +1,6 @@
 # implementation-plan.md — 實作計畫
 > Soul Knight (OOP 2025 期末專案)
-> 版本: 1.2 | 最後更新: 2026-03-20（整合 Q&A：玩家初始位置、武器數值、能量系統、層數、Boss 分段）
+> 版本: 1.3 | 最後更新: 2026-03-21（整合 Q&A：CMakeLists RESOURCE_DIR、子彈方向 WASD、地城 5×5 布局、掉落物數值、HUD UI_15.png）
 
 ---
 
@@ -40,16 +40,23 @@
 | `Resources/Bullets/` | `突刺动图0.png` → `enemy_stab.png` | 突刺圖 |
 | `Resources/Bullets/` | `42px-箭矢-敌方.png` → `enemy_arrow.png` | 箭矢 |
 
+**Step 1.1 同時需修改 `CMakeLists.txt`**：
+- 加入 `target_compile_definitions(${PROJECT_NAME} PRIVATE RESOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/Resources")`（確認不存在才加）
+
+**腳本自動偵測缺漏**：
+- 腳本複製完後，掃描 `Resources/` 下所有預期素材，列出缺漏檔案並 `Write-Host` 警告
+
 **驗收條件**：
 - [ ] `Resources/` 下所有子目錄存在
 - [ ] 所有上述素材檔案正確到位（含重命名）
+- [ ] 腳本輸出「缺漏報告」（無缺漏則顯示 OK）
 - [ ] CMake 建置不報 missing file 錯誤
 
 ---
 
 ### Step 1.2 — Tile 類別與測試房間渲染
 
-**目的**：在螢幕上看到一個 16 列 × 10 行 的測試房間（地板 + 牆壁外框）。
+**目的**：在螢幕上看到一個 17 列 × 17 行 的測試房間（地板 15×15 + 四面各 1 格牆 + NorthFace/SouthFace 行）。
 
 **新增檔案**：
 - `include/World/Tile.hpp`
@@ -76,7 +83,7 @@ float worldY = -(row * TILE_SIZE - (ROWS * TILE_SIZE) / 2.0f + TILE_SIZE / 2.0f)
 
 **驗收條件**：
 - [ ] 編譯成功，無警告
-- [ ] 畫面中央出現 16×10 房間（地板填滿，外圍一圈牆壁）
+- [ ] 畫面中央出現 17×17 房間（地板 15×15 填滿，外圍牆壁，SouthFace 可見於底部）
 - [ ] 牆壁視覺上是上方有花紋（w001），南側牆壁有側邊感（w004）
 
 ---
@@ -93,7 +100,7 @@ float worldY = -(row * TILE_SIZE - (ROWS * TILE_SIZE) / 2.0f + TILE_SIZE / 2.0f)
 **技術規格**：
 - `Entity` 繼承 `Util::GameObject`，定義 `Update(float dt)` 虛函式
 - `Player` 繼承 `Entity`
-- **初始位置**：`m_WorldPos = {-300.0f, -100.0f}`（16×10 房間左側地板，視覺上為可行走區域）
+- **初始位置**：`m_WorldPos = {-300.0f, -100.0f}`（17×17 房間左側地板，地板範圍 X∈[-336,336]，Y∈[-288,288]）
 - 移動速度：`300.0f` pixel/second
 - 斜向移動：需 `glm::normalize()` 歸一化速度向量（零向量不歸一化）
 - 動畫：
@@ -162,7 +169,7 @@ float worldY = -(row * TILE_SIZE - (ROWS * TILE_SIZE) / 2.0f + TILE_SIZE / 2.0f)
 ---
 
 **M1 整體驗收條件**：
-- [ ] 畫面中央有一個 16×10 房間（地板+牆壁）
+- [ ] 畫面中央有一個 17×17 房間（地板 15×15 + 牆壁 + SouthFace 底部深度效果）
 - [ ] WASD 移動，動畫正確（Walk/Idle），朝向正確
 - [ ] 相機跟隨玩家（即時，無 Lerp）
 - [ ] 玩家無法穿越牆壁，不卡角
@@ -242,6 +249,7 @@ void GoblinEnemy::TryMove(glm::vec2 wishDir, float speed, float dt) {
 - 發射原點：從玩家中心往面向方向偏移 **20px**（防止子彈在玩家身體內生成）
 - 子彈 Hitbox：統一使用 **10×10px** 核心小判定盒（與圖片尺寸無關）
 - 攻擊鍵：**`Util::Keycode::J`**（已定案）
+- **射擊方向**：讀取 `m_LastMoveDir`（最後一次 WASD 輸入，Normalize 後存入），無輸入時沿用上一次方向；與 `m_FacingLeft` 獨立
 
 **三種武器規格**：
 | 武器 | 類別 | 速度 | 能量/次 | 攻擊力 | 射擊邏輯 |
@@ -316,6 +324,7 @@ void GoblinEnemy::TryMove(glm::vec2 wishDir, float speed, float dt) {
 - 設計 3–5 種不同大小的房間模板（以 Tile 陣列 / Template ID 定義）
 - 大小範圍：最小 15×10，最大 30×20
 - `Room::Generate(int width, int height, int templateId)` 根據模板生成 TileMap
+- 每個房間保存在 5×5 網格的格子座標（`m_GridPos`），供 DungeonGenerator 走廊銜接使用
 
 **驗收條件**：
 - [ ] 可隨機選取不同模板生成房間，大小和佈局各不相同
@@ -326,15 +335,22 @@ void GoblinEnemy::TryMove(glm::vec2 wishDir, float speed, float dt) {
 ### Step 3.2 — 地城生成演算法
 
 **技術規格**：
-- `DungeonGenerator::Generate(seed, numRooms)` 生成 6–9 個普通房間 + 1 個 Boss 房間
-- 結構：樹狀/網狀分支，允許玩家選擇不同路徑
-- 相鄰房間以**走廊**銜接（走廊寬度 2~3 格，純地板 Tile 構成）
-- 確保所有房間連通（起始房間可達所有房間）
+- `DungeonGenerator::Generate(seed, floorIndex)` 生成完整一層地城
+- **布局規則（5×5 網格，已確認）**：
+  - 初始房間固定在網格中心 (2,2)
+  - 普通層：初始 → 2 個基礎小怪房間 → 傳送門房間（線性主線）
+  - Boss 層：初始 → 3 個基礎小怪房間 → Boss 房間
+  - 輔助房間（寶箱/特殊/額外小怪）隨機生成於基礎小怪房間相鄰格，必須與至少 1 個基礎房間相連
+  - 每個基礎小怪房間最多接 1 個額外小怪房間
+  - 初始房間與傳送門/Boss 房間各只與 1 個基礎房間相連
+- 走廊：WallTile 兩側夾 FloorTile，**固定 6 格地板 + 兩側各 1 格牆 = 8 格總寬**
+- 方向：僅允許上下左右四向（與 5×5 網格對齊）
 
 **驗收條件**：
 - [ ] 每次生成的地城結構不同（seed 不同時）
-- [ ] 所有房間可達（從起始房間能走到所有房間）
-- [ ] 走廊視覺正確（地板 Tile，無牆壁阻擋）
+- [ ] 主線路徑（初始→基礎→傳送門）連通，可步行完成
+- [ ] 輔助房間正確生成於基礎房間相鄰位置
+- [ ] 走廊寬 4 格，兩側有牆壁
 
 ---
 

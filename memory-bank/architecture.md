@@ -1,6 +1,6 @@
 # architecture.md — 架構設計文件
 > Soul Knight (OOP 2025 期末專案)
-> 版本: 1.4 | 最後更新: 2026-03-20（新增武器類別設計、能量系統數值、Boss 分段攻擊）
+> 版本: 1.5 | 最後更新: 2026-03-21（更新 Player 射擊方向為 WASD m_LastMoveDir、新增地城 5×5 網格布局架構）
 
 ---
 
@@ -165,9 +165,10 @@ private:
     std::shared_ptr<Weapon>           m_CurrentWeapon;  // 武器資料 + 行為
     std::shared_ptr<Util::GameObject> m_WeaponSprite;   // 武器視覺物件（獨立 GameObject）
 
-    int   m_Energy    = 200;   // ⭐ 初始滿能量
-    int   m_MaxEnergy = 200;   // ⭐ 最大能量（已確認為 200）
-    bool  m_FacingLeft = false;
+    int       m_Energy      = 200;            // ⭐ 初始滿能量
+    int       m_MaxEnergy   = 200;            // ⭐ 最大能量（已確認為 200）
+    bool      m_FacingLeft  = false;          // 控制 Sprite 翻轉（只在有水平輸入時更新）
+    glm::vec2 m_LastMoveDir = {1.0f, 0.0f};  // ⭐ 射擊方向：記錄最後一次 WASD 輸入（Normalize），無輸入時沿用
 };
 ```
 
@@ -455,8 +456,9 @@ TileMap 座標（row, col）：
   worldX =  col * TILE_SIZE - (mapCols * TILE_SIZE) / 2 + TILE_SIZE / 2
   worldY = -(row * TILE_SIZE - (mapRows * TILE_SIZE) / 2 + TILE_SIZE / 2)  ← ⚠️ 負號不可省
 
-M1 測試房間（16 列 × 10 行）：
-  總寬 = 16 × 48 = 768px，總高 = 10 × 48 = 480px
+M1 測試房間（17×17 格含牆，地板 15×15）：
+  總寬 = 17 × 48 = 816px，總高 = 17 × 48 = 816px
+  可見行：Row 1（NorthFace）~ Row 15（SouthFace），恰好填滿 720px 螢幕高度
   玩家初始位置 = (-300.0f, -100.0f)（左側地板區域）
 ```
 
@@ -534,19 +536,27 @@ include/
 
 ## 七、動態 Y-Sorting（2.5D 渲染排序）
 
+> [!CAUTION]
+> **⚠️ PTSD Z-Index 硬性限制（2026-03-25 確認）**
+> `zIndex` 直接作為 3D Z 座標，nearClip=-100, farClip=100。
+> **Z > 100 或 Z < -100 → 被 GPU 裁剪，完全不可見！**
+
 | 物件類型 | Z-Index 策略 | 具體值 |
 |---------|------------|--------|
 | 地板 Tile | 固定 | `0.0f` |
 | 地板裝飾（血跡等） | 固定 | `1.0f` |
-| 玩家、敵人、掉落物、南側牆壁 | 動態 Y-Sorting | `clamp(1000 - worldY, 2.0f, 198.0f)` |
-| 武器精靈（m_WeaponSprite） | 動態 | 玩家 Z-Index + 1 |
-| 子彈 | 固定 | `199.0f` ← 必須，防止被實體遮蓋 |
-| HUD / UI | 固定 | `200.0f` |
+| WallTile（上/左/右牆）| 固定 | `0.5f` |
+| NorthFaceTile | 固定 | `0.6f` |
+| 玩家、敵人、掉落物、SouthFaceTile | 動態 Y-Sorting | `clamp(50 - worldY/6, 2.0f, 98.0f)` |
+| 武器精靈（m_WeaponSprite） | 動態 | 玩家 Z-Index + 0.1f（不超過 98.5f）|
+| 子彈 | 固定 | `99.0f` |
+| HUD / UI | 固定 | `99.5f` |
 
 ```cpp
 void Entity::UpdateZIndex() {
     // ⚠️ 必須使用 m_WorldPos.y，不得用 m_Transform.translation.y
-    SetZIndex(glm::clamp(1000.0f - m_WorldPos.y, 2.0f, 198.0f));
+    // ⚠️ Z 必須在 (-100, 100) 內，否則被 PTSD GPU 裁剪不可見
+    SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f));
 }
 ```
 
@@ -555,11 +565,21 @@ void Entity::UpdateZIndex() {
 ## 八、玩家攻擊設計（已定案）
 
 - **攻擊鍵**：`Util::Keycode::J`（已定案，禁止使用其他按鍵）
-- **攻擊方式**：按鍵觸發，向 `m_FacingLeft` 決定的方向發射，非自動攻擊
+- **射擊方向**：讀取 `m_LastMoveDir`（與 `m_FacingLeft` 獨立）
+
+> [!IMPORTANT]
+> **⚠️ `m_LastMoveDir` vs `m_FacingLeft` — 兩個獨立的方向狀態**
+>
+> | 變數 | 更新時機 | 用途 |
+> |------|---------|------|
+> | `m_FacingLeft` | 有水平輸入（A/D）時才更新 | 控制 Sprite 翻轉（左/右鏡像） |
+> | `m_LastMoveDir` | 有任何 WASD 輸入時更新（Normalize 後存入） | 決定子彈飛行方向 |
+>
+> 兩者互不影響。例如：玩家按 W 向上走時，`m_FacingLeft` 保持上次值（不變），`m_LastMoveDir` 更新為 `{0,1}`。
 
 ```
-1. 玩家按下 J 鍵
-2. 讀取 m_FacingLeft → direction = {-1,0} 或 {1,0}
+1. 有 WASD 輸入時：m_LastMoveDir = normalize(input)（同時更新 m_FacingLeft 如有水平輸入）
+2. 玩家按下 J 鍵：direction = m_LastMoveDir
 3. 呼叫 m_CurrentWeapon->Fire(m_WorldPos, direction, bulletMgr)
 4. 若 RequiresEnergy() = true，先檢查 m_Energy 是否足夠
    - 不足：不射擊（無視按鍵輸入）
