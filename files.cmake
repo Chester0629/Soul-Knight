@@ -4,6 +4,7 @@ set(SRC_FILES
     Room.cpp
     Entity/Player.cpp
     World/Camera.cpp
+    System/CollisionSystem.cpp
 )
 
 set(INCLUDE_FILES
@@ -13,6 +14,7 @@ set(INCLUDE_FILES
     Entity/Entity.hpp
     Entity/Player.hpp
     World/Camera.hpp
+    System/CollisionSystem.hpp
 )
 
 set(TEST_FILES

@@ -1,5 +1,6 @@
 #include "Entity/Player.hpp"
 
+#include "System/CollisionSystem.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "World/Camera.hpp"
@@ -34,7 +35,6 @@ Player::Player() {
     m_Transform.scale = {3.0f, 3.0f};
     SetVisible(true);
     UpdateZIndex();
-    // Step 1.4：使用相機位置同步初始渲染（Camera 初始為 {0,0}）
     SyncRenderTransform(Camera::GetPosition());
 }
 
@@ -70,7 +70,14 @@ void Player::HandleInput(float dt) {
 void Player::Update(float dt) {
     HandleInput(dt);
 
+    // Step 1.5：AABB 碰撞解決（穿透深度 Push Back，禁止暴力歸位）
+    CollisionSystem::ResolveWall(
+        m_WorldPos,
+        {0.0f, HIT_OFFSET_Y},
+        {static_cast<float>(HIT_W), static_cast<float>(HIT_H)}
+    );
+
     m_Transform.scale = {m_FacingLeft ? -3.0f : 3.0f, 3.0f};
 
-    // Step 1.4：SyncRender 由 App 在 Camera::Update 後呼叫，確保玩家完美置中
+    // ⚠️ SyncRender 由 App 在 Camera::Update 之後呼叫
 }
