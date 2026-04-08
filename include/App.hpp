@@ -2,6 +2,7 @@
 
 #include "pch.hpp" // IWYU pragma: export
 
+#include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
 #include "Room.hpp"
 #include "Util/Renderer.hpp"
@@ -25,6 +26,7 @@ private:
 
     Util::Renderer m_Root;
     Room           m_Room{RoomSpec::START_W, RoomSpec::START_H};
-    // Step 1.3：玩家
     std::shared_ptr<Player> m_Player;
+    // Step 2.1：敵人管理
+    EnemyManager m_EnemyManager;
 };

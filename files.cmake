@@ -3,6 +3,11 @@ set(SRC_FILES
     Tile.cpp
     Room.cpp
     Entity/Player.cpp
+    Entity/Enemy.cpp
+    Entity/PistolGoblin.cpp
+    Entity/SpearGoblin.cpp
+    Entity/ArcherGoblin.cpp
+    Entity/EnemyManager.cpp
     World/Camera.cpp
     System/CollisionSystem.cpp
 )
@@ -13,6 +18,8 @@ set(INCLUDE_FILES
     Room.hpp
     Entity/Entity.hpp
     Entity/Player.hpp
+    Entity/Enemy.hpp
+    Entity/EnemyManager.hpp
     World/Camera.hpp
     System/CollisionSystem.hpp
 )
