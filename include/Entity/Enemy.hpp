@@ -3,7 +3,8 @@
 #include "Entity/Entity.hpp"
 #include "Util/Animation.hpp"
 
-class Player; // 避免循環 include，在 .cpp 中 include Player.hpp
+class Player;        // 避免循環 include，在 .cpp 中 include Player.hpp
+class BulletManager; // 前向宣告
 
 // ─── Enemy ────────────────────────────────────────────────────────────────────
 class Enemy : public Entity {
@@ -24,12 +25,14 @@ protected:
 };
 
 // ─── GoblinEnemy ──────────────────────────────────────────────────────────────
-// 所有哥布林的中間基類
+// BulletManager* 在建構時注入（不擁有），供攻擊時發射子彈（Step 2.3 實裝）
 class GoblinEnemy : public Enemy {
 public:
-    GoblinEnemy();
+    explicit GoblinEnemy(BulletManager* bulletMgr);
 
 protected:
+    BulletManager* m_BulletMgr = nullptr;  // 注入，不擁有
+
     static constexpr float GOBLIN_HIT_W = 32.0f;
     static constexpr float GOBLIN_HIT_H = 28.0f;
 
@@ -42,7 +45,7 @@ private:
 // ─── PistolGoblin ─────────────────────────────────────────────────────────────
 class PistolGoblin : public GoblinEnemy {
 public:
-    PistolGoblin() = default;
+    explicit PistolGoblin(BulletManager* bulletMgr) : GoblinEnemy(bulletMgr) {}
 
 protected:
     void UpdateAI(float dt) override;
@@ -60,7 +63,7 @@ private:
 // ─── SpearGoblin ──────────────────────────────────────────────────────────────
 class SpearGoblin : public GoblinEnemy {
 public:
-    SpearGoblin() = default;
+    explicit SpearGoblin(BulletManager* bulletMgr) : GoblinEnemy(bulletMgr) {}
 
 protected:
     void UpdateAI(float dt) override;
@@ -73,7 +76,7 @@ private:
 // ─── ArcherGoblin ─────────────────────────────────────────────────────────────
 class ArcherGoblin : public GoblinEnemy {
 public:
-    ArcherGoblin() = default;
+    explicit ArcherGoblin(BulletManager* bulletMgr) : GoblinEnemy(bulletMgr) {}
 
 protected:
     void UpdateAI(float dt) override;

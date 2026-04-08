@@ -1,11 +1,14 @@
 #include "Entity/Player.hpp"
 
 #include "System/CollisionSystem.hpp"
+#include "Util/Image.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "World/Camera.hpp"
 
-Player::Player() {
+Player::Player(BulletManager* bulletMgr)
+    : m_BulletMgr(bulletMgr)
+{
     m_WorldPos = {INITIAL_X, INITIAL_Y};
     m_Speed    = SPEED;
     m_HP = m_MaxHP = 10;
@@ -34,8 +37,25 @@ Player::Player() {
     m_IsWalkingAnim = false;
     m_Transform.scale = {3.0f, 3.0f};
     SetVisible(true);
+
+    // 初始武器：手槍
+    m_CurrentWeapon = std::make_shared<GunWeapon>();
+
+    // 武器精靈（手持顯示）
+    m_WeaponSprite = std::make_shared<Util::GameObject>();
+    m_WeaponSprite->SetDrawable(
+        std::make_shared<Util::Image>(m_CurrentWeapon->GetSpritePath())
+    );
+    m_WeaponSprite->SetZIndex(GetZIndex() + 0.1f);
+    m_WeaponSprite->m_Transform.scale = {3.0f, 3.0f};
+    m_WeaponSprite->SetVisible(true);
+
     UpdateZIndex();
     SyncRenderTransform(Camera::GetPosition());
+}
+
+void Player::AddWeaponSpriteToRenderer(Util::Renderer& root) {
+    root.AddChild(m_WeaponSprite);
 }
 
 void Player::HandleInput(float dt) {
@@ -67,10 +87,34 @@ void Player::HandleInput(float dt) {
     }
 }
 
+void Player::TryShoot(float dt) {
+    if (!m_CurrentWeapon || !m_BulletMgr) return;
+    if (!m_CurrentWeapon->TryFire(dt)) return;
+
+    if (m_CurrentWeapon->RequiresEnergy()) {
+        if (m_Energy < m_CurrentWeapon->EnergyCostPerShot()) return;
+        m_Energy -= m_CurrentWeapon->EnergyCostPerShot();
+    }
+
+    m_CurrentWeapon->Fire(m_WorldPos, m_LastMoveDir, *m_BulletMgr);
+}
+
+void Player::UpdateWeaponSpriteTransform() {
+    if (!m_WeaponSprite) return;
+    const float flip      = m_FacingLeft ? -1.0f : 1.0f;
+    const float baseScale = 3.0f;
+    m_WeaponSprite->m_Transform.scale = {flip * baseScale, baseScale};
+
+    const float     handOffset    = flip * 16.0f;
+    const glm::vec2 weaponWorldPos = {m_WorldPos.x + handOffset, m_WorldPos.y};
+    m_WeaponSprite->m_Transform.translation = weaponWorldPos - Camera::GetPosition();
+    m_WeaponSprite->SetZIndex(GetZIndex() + 0.1f);
+}
+
 void Player::Update(float dt) {
     HandleInput(dt);
+    TryShoot(dt);
 
-    // Step 1.5：AABB 碰撞解決（穿透深度 Push Back，禁止暴力歸位）
     CollisionSystem::ResolveWall(
         m_WorldPos,
         {0.0f, HIT_OFFSET_Y},
@@ -78,6 +122,5 @@ void Player::Update(float dt) {
     );
 
     m_Transform.scale = {m_FacingLeft ? -3.0f : 3.0f, 3.0f};
-
-    // ⚠️ SyncRender 由 App 在 Camera::Update 之後呼叫
+    UpdateWeaponSpriteTransform();
 }

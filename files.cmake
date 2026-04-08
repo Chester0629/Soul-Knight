@@ -10,6 +10,9 @@ set(SRC_FILES
     Entity/EnemyManager.cpp
     World/Camera.cpp
     System/CollisionSystem.cpp
+    Weapon/Bullet.cpp
+    Weapon/BulletManager.cpp
+    Weapon/Weapon.cpp
 )
 
 set(INCLUDE_FILES
@@ -22,6 +25,9 @@ set(INCLUDE_FILES
     Entity/EnemyManager.hpp
     World/Camera.hpp
     System/CollisionSystem.hpp
+    Weapon/Bullet.hpp
+    Weapon/BulletManager.hpp
+    Weapon/Weapon.hpp
 )
 
 set(TEST_FILES

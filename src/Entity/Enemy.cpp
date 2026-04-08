@@ -1,6 +1,7 @@
 #include "Entity/Enemy.hpp"
 
 #include "System/CollisionSystem.hpp"
+#include "Weapon/BulletManager.hpp"
 #include "World/Camera.hpp"
 
 // ─── Enemy::Update ────────────────────────────────────────────────────────────
@@ -15,7 +16,9 @@ void Enemy::Update(float dt) {
 
 // ─── GoblinEnemy ──────────────────────────────────────────────────────────────
 
-GoblinEnemy::GoblinEnemy() {
+GoblinEnemy::GoblinEnemy(BulletManager* bulletMgr)
+    : m_BulletMgr(bulletMgr)
+{
     m_HP    = Enemy::BASE_HP;
     m_MaxHP = Enemy::BASE_HP;
     m_Speed = Enemy::BASE_SPEED;

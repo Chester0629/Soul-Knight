@@ -6,6 +6,7 @@
 #include "Entity/Player.hpp"
 #include "Room.hpp"
 #include "Util/Renderer.hpp"
+#include "Weapon/BulletManager.hpp"
 
 class App {
 public:
@@ -26,7 +27,8 @@ private:
 
     Util::Renderer m_Root;
     Room           m_Room{RoomSpec::START_W, RoomSpec::START_H};
+    // BulletManager 必須在 Player/EnemyManager 前宣告，確保生命週期
+    BulletManager  m_BulletManager;
     std::shared_ptr<Player> m_Player;
-    // Step 2.1：敵人管理
     EnemyManager m_EnemyManager;
 };

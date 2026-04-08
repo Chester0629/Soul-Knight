@@ -16,18 +16,23 @@ void App::Start() {
 
     CollisionSystem::SetRoom(&m_Room);
 
-    m_Player = std::make_shared<Player>();
-    m_Root.AddChild(m_Player);
+    // Step 2.2：子彈對象池加入渲染樹（100 顆 GameObject 一次性加入）
+    m_BulletManager.AddToRenderer(m_Root);
 
-    // Step 2.1：生成測試哥布林（各 1 隻，分散在房間內）
+    // 玩家（注入 BulletManager*）
+    m_Player = std::make_shared<Player>(&m_BulletManager);
+    m_Root.AddChild(m_Player);
+    m_Player->AddWeaponSpriteToRenderer(m_Root);
+
+    // 測試哥布林（注入 BulletManager*）
     {
-        auto pistol = std::make_shared<PistolGoblin>();
+        auto pistol = std::make_shared<PistolGoblin>(&m_BulletManager);
         pistol->SetWorldPos({200.0f, 100.0f});
 
-        auto spear = std::make_shared<SpearGoblin>();
+        auto spear = std::make_shared<SpearGoblin>(&m_BulletManager);
         spear->SetWorldPos({-150.0f, 50.0f});
 
-        auto archer = std::make_shared<ArcherGoblin>();
+        auto archer = std::make_shared<ArcherGoblin>(&m_BulletManager);
         archer->SetWorldPos({0.0f, -150.0f});
 
         m_EnemyManager.AddEnemy(pistol);
@@ -47,6 +52,7 @@ void App::Update() {
     Camera::Update(m_Player->GetWorldPos());
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
+    m_BulletManager.Update(dt, Camera::GetPosition());
     m_Room.SyncTransforms(Camera::GetPosition());
 
     m_Root.Update();
