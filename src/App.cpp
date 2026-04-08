@@ -3,19 +3,27 @@
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
+#include "Util/Time.hpp"
 
 void App::Start() {
     LOG_TRACE("Start");
 
-    // Step 1.2：測試房間加入渲染樹，以世界原點為中心
     m_Room.AddToRenderer(m_Root);
     m_Room.SyncTransforms({0.0f, 0.0f});
+
+    // Step 1.3：玩家
+    m_Player = std::make_shared<Player>();
+    m_Root.AddChild(m_Player);
 
     m_CurrentState = State::UPDATE;
 }
 
 void App::Update() {
-    // Step 1.2：房間靜態渲染（無玩家、無相機）
+    const float dt = Util::Time::GetDeltaTimeMs() / 1000.0f;
+
+    // Step 1.3：玩家更新（含 WASD 移動、動畫、朝向）
+    // 尚無相機，房間固定在原點
+    m_Player->Update(dt);
     m_Room.SyncTransforms({0.0f, 0.0f});
     m_Root.Update();
 

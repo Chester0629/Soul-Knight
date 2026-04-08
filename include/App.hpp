@@ -2,6 +2,7 @@
 
 #include "pch.hpp" // IWYU pragma: export
 
+#include "Entity/Player.hpp"
 #include "Room.hpp"
 #include "Util/Renderer.hpp"
 
@@ -23,6 +24,7 @@ private:
     State m_CurrentState = State::START;
 
     Util::Renderer m_Root;
-    // Step 1.2：測試房間（17×17 含牆，地板 15×15）
-    Room m_Room{RoomSpec::START_W, RoomSpec::START_H};
+    Room           m_Room{RoomSpec::START_W, RoomSpec::START_H};
+    // Step 1.3：玩家
+    std::shared_ptr<Player> m_Player;
 };
