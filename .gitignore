@@ -494,3 +494,8 @@ lib/
 
 # Doxygen generated files
 docs/html/
+
+# 原始素材資料夾（2896+ PNG 解包素材，不納入版控）
+1.07/
+# PTSD 引擎（由 CMake FetchContent 自動下載，不納入版控）
+PTSD/
