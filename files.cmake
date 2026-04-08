@@ -3,6 +3,7 @@ set(SRC_FILES
     Tile.cpp
     Room.cpp
     Entity/Player.cpp
+    World/Camera.cpp
 )
 
 set(INCLUDE_FILES
@@ -11,6 +12,7 @@ set(INCLUDE_FILES
     Room.hpp
     Entity/Entity.hpp
     Entity/Player.hpp
+    World/Camera.hpp
 )
 
 set(TEST_FILES

@@ -2,13 +2,13 @@
 
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
+#include "World/Camera.hpp"
 
 Player::Player() {
     m_WorldPos = {INITIAL_X, INITIAL_Y};
     m_Speed    = SPEED;
     m_HP = m_MaxHP = 10;
 
-    // Walk 動畫：c01_0~3，100ms，循環
     m_WalkAnim = std::make_shared<Util::Animation>(
         std::vector<std::string>{
             RESOURCE_DIR "/Characters/c01_0.png",
@@ -19,7 +19,6 @@ Player::Player() {
         true, 100, true, 0
     );
 
-    // Idle 動畫：c01_4~7，150ms，循環
     m_IdleAnim = std::make_shared<Util::Animation>(
         std::vector<std::string>{
             RESOURCE_DIR "/Characters/c01_4.png",
@@ -35,8 +34,8 @@ Player::Player() {
     m_Transform.scale = {3.0f, 3.0f};
     SetVisible(true);
     UpdateZIndex();
-    // Step 1.3：尚無相機，使用世界原點作為渲染偏移
-    SyncRenderTransform({0.0f, 0.0f});
+    // Step 1.4：使用相機位置同步初始渲染（Camera 初始為 {0,0}）
+    SyncRenderTransform(Camera::GetPosition());
 }
 
 void Player::HandleInput(float dt) {
@@ -71,10 +70,7 @@ void Player::HandleInput(float dt) {
 void Player::Update(float dt) {
     HandleInput(dt);
 
-    // 朝向翻轉（scale.x 正/負）
     m_Transform.scale = {m_FacingLeft ? -3.0f : 3.0f, 3.0f};
 
-    // Step 1.3：渲染座標 = 世界座標（無相機偏移）
-    SyncRenderTransform({0.0f, 0.0f});
-    UpdateZIndex();
+    // Step 1.4：SyncRender 由 App 在 Camera::Update 後呼叫，確保玩家完美置中
 }

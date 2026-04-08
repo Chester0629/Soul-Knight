@@ -4,6 +4,7 @@
 #include "Util/Keycode.hpp"
 #include "Util/Logger.hpp"
 #include "Util/Time.hpp"
+#include "World/Camera.hpp"
 
 void App::Start() {
     LOG_TRACE("Start");
@@ -11,7 +12,6 @@ void App::Start() {
     m_Room.AddToRenderer(m_Root);
     m_Room.SyncTransforms({0.0f, 0.0f});
 
-    // Step 1.3：玩家
     m_Player = std::make_shared<Player>();
     m_Root.AddChild(m_Player);
 
@@ -21,10 +21,16 @@ void App::Start() {
 void App::Update() {
     const float dt = Util::Time::GetDeltaTimeMs() / 1000.0f;
 
-    // Step 1.3：玩家更新（含 WASD 移動、動畫、朝向）
-    // 尚無相機，房間固定在原點
+    // Step 1.4 更新順序：
+    //   1. 玩家輸入 + 物理移動（更新 m_WorldPos）
+    //   2. 相機跟隨（即時，無 Lerp）
+    //   3. 玩家渲染同步（此時相機已更新，玩家永遠置中）
+    //   4. 房間渲染同步
     m_Player->Update(dt);
-    m_Room.SyncTransforms({0.0f, 0.0f});
+    Camera::Update(m_Player->GetWorldPos());
+    m_Player->SyncRender(Camera::GetPosition());
+    m_Room.SyncTransforms(Camera::GetPosition());
+
     m_Root.Update();
 
     if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||
