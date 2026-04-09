@@ -27,7 +27,7 @@ private:
     State m_CurrentState = State::START;
 
     Util::Renderer m_Root;
-    Room           m_Room{RoomSpec::START_W, RoomSpec::START_H};
+    std::unique_ptr<Room> m_Room;   // Step 3.1+：動態建立，支援多模板
     // BulletManager 必須在 Player/EnemyManager 前宣告，確保生命週期
     BulletManager  m_BulletManager;
     std::shared_ptr<Player> m_Player;

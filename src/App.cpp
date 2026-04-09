@@ -8,13 +8,23 @@
 #include "Util/Time.hpp"
 #include "World/Camera.hpp"
 
+#include <cstdlib>
+#include <ctime>
+
 void App::Start() {
     LOG_TRACE("Start");
 
-    m_Room.AddToRenderer(m_Root);
-    m_Room.SyncTransforms({0.0f, 0.0f});
+    // Step 3.1：隨機選擇房間模板（每次執行不同房間）
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    const auto tmpl = static_cast<RoomTemplate>(
+        std::rand() % static_cast<int>(RoomTemplate::COUNT)
+    );
+    m_Room = std::make_unique<Room>(tmpl);
 
-    CollisionSystem::SetRoom(&m_Room);
+    m_Room->AddToRenderer(m_Root);
+    m_Room->SyncTransforms({0.0f, 0.0f});
+
+    CollisionSystem::SetRoom(m_Room.get());
 
     // Step 2.2：子彈對象池加入渲染樹（100 顆 GameObject 一次性加入）
     m_BulletManager.AddToRenderer(m_Root);
@@ -56,7 +66,7 @@ void App::Update() {
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
     m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
-    m_Room.SyncTransforms(Camera::GetPosition());
+    m_Room->SyncTransforms(Camera::GetPosition());
 
     // HUD 每幀同步玩家血量與能量
     m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),

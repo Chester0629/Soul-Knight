@@ -1,20 +1,28 @@
 #include "Room.hpp"
 
-Room::Room(int cols, int rows) : m_Cols(cols), m_Rows(rows) {
+Room::Room(RoomTemplate tmpl, glm::ivec2 gridPos, glm::vec2 worldOffset)
+    : m_Template(tmpl)
+    , m_GridPos(gridPos)
+    , m_WorldOffset(worldOffset)
+{
+    const auto sz = RoomSpec::GetSize(tmpl);
+    m_Cols = sz.cols;
+    m_Rows = sz.rows;
     m_TileMap.assign(m_Rows, std::vector<std::shared_ptr<Tile>>(m_Cols, nullptr));
     Build();
 }
 
-// ── 世界座標換算 ──────────────────────────────────────────────────────────────
+// ── 世界座標換算（靜態，不含偏移）────────────────────────────────────────────
 // ⚠️ worldY 有負號：TileMap row 向下遞增，PTSD Y 軸向上為正
 glm::vec2 Room::TileToWorld(int row, int col, int mapRows, int mapCols) {
-    const float worldX =  col * TILE_SIZE
-                        - (mapCols * TILE_SIZE) / 2.0f
-                        + TILE_SIZE / 2.0f;
-    const float worldY = -(row * TILE_SIZE
-                         - (mapRows * TILE_SIZE) / 2.0f
-                         + TILE_SIZE / 2.0f);
+    const float worldX =  col * TILE_SIZE - (mapCols * TILE_SIZE) / 2.0f + TILE_SIZE / 2.0f;
+    const float worldY = -(row * TILE_SIZE - (mapRows * TILE_SIZE) / 2.0f + TILE_SIZE / 2.0f);
     return {worldX, worldY};
+}
+
+// ── 世界座標換算（含房間偏移）────────────────────────────────────────────────
+glm::vec2 Room::TileToWorld(int row, int col) const {
+    return TileToWorld(row, col, m_Rows, m_Cols) + m_WorldOffset;
 }
 
 // ── 生成 TileMap ──────────────────────────────────────────────────────────────
@@ -28,7 +36,7 @@ glm::vec2 Room::TileToWorld(int row, int col, int mapRows, int mapCols) {
 void Room::Build() {
     for (int row = 0; row < m_Rows; row++) {
         for (int col = 0; col < m_Cols; col++) {
-            const glm::vec2 pos = TileToWorld(row, col, m_Rows, m_Cols);
+            const glm::vec2 pos = TileToWorld(row, col);  // 含 m_WorldOffset
 
             const bool isEdgeCol  = (col == 0 || col == m_Cols - 1);
             const bool isCapRow   = (row == 0);
