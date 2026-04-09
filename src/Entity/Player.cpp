@@ -108,7 +108,10 @@ void Player::UpdateWeaponSpriteTransform() {
     const float     handOffset    = flip * 16.0f;
     const glm::vec2 weaponWorldPos = {m_WorldPos.x + handOffset, m_WorldPos.y};
     m_WeaponSprite->m_Transform.translation = weaponWorldPos - Camera::GetPosition();
-    m_WeaponSprite->SetZIndex(GetZIndex() + 0.1f);
+
+    // 使用與 SyncRender 相同公式直接算當前 Z，不依賴上一幀的 GetZIndex()
+    const float playerZ = glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f);
+    m_WeaponSprite->SetZIndex(playerZ + 0.1f);
 }
 
 void Player::Update(float dt) {

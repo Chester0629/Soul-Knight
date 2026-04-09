@@ -31,7 +31,12 @@ void BulletManager::Spawn(glm::vec2 worldPos, glm::vec2 dir, float speed,
     b->m_IsPlayer = isPlayer;
     b->m_Active   = true;
     b->SetVisible(true);  // ⚠️ 必須，防止幽靈渲染
-    b->m_Transform.scale = {2.0f, 2.0f};
+    b->m_Transform.scale    = {2.0f, 2.0f};
+    // 依速度方向旋轉（atan2 回傳弧度，PTSD rotation 為角度）
+    if (glm::length(dir) > 0.0f) {
+        const glm::vec2 nd = glm::normalize(dir);
+        b->m_Transform.rotation = glm::degrees(std::atan2(nd.y, nd.x));
+    }
 }
 
 void BulletManager::Deactivate(Bullet* b) {
