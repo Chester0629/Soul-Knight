@@ -32,11 +32,13 @@ void ArcherGoblin::UpdateAI(float dt) {
         }
         break;
     }
-    // ── AIM：停止移動，瞄準 AIM_DURATION 秒 ──────────────────────────────────
+    // ── AIM：停止移動，瞄準 AIM_DURATION 秒後射箭 ───────────────────────────
     case AiState::AIM: {
         m_StateTimer += dt;
-        if (m_StateTimer >= AIM_DURATION) {
-            // TODO (Step 2.3): bulletMgr->Spawn(arrow, m_WorldPos, dir, 500.0f, dmg, false)
+        if (m_StateTimer >= AIM_DURATION && m_BulletMgr) {
+            const int       dmg = m_IsElite ? 5 : 4;
+            const glm::vec2 dir = (dist > 0.01f) ? glm::normalize(toPlayer) : glm::vec2{1.0f, 0.0f};
+            m_BulletMgr->Spawn(m_WorldPos, dir, 500.0f, dmg, false);
             m_AiState        = AiState::COOLDOWN;
             m_StateTimer     = 0.0f;
             m_AttackCooldown = SHOOT_COOLDOWN;

@@ -7,10 +7,13 @@
 #include <memory>
 #include <vector>
 
+class Player;        // 前向宣告
+class EnemyManager;  // 前向宣告
+
 // BulletManager — 子彈對象池（上限 100 顆）
 // 使用方式：
 //   1. App::Start()  呼叫 AddToRenderer() 將所有子彈 GameObject 加入渲染樹
-//   2. App::Update() 呼叫 Update(dt, cameraPos) 每幀更新
+//   2. App::Update() 呼叫 Update(dt, cameraPos, player, enemyMgr) 每幀更新
 //   3. Weapon::Fire() 呼叫 Spawn() 生成子彈
 class BulletManager {
 public:
@@ -18,12 +21,11 @@ public:
 
     // 生成子彈（從非活躍子彈池取出一顆）
     // lifetime=-1.0f → 不限時；>0 → 秒數倒數後自動 Deactivate
-    // ⚠️ SpearGoblin 突刺：speed=0, lifetime=0.3f, isPlayer=false
     void Spawn(glm::vec2 worldPos, glm::vec2 dir, float speed,
                int damage, bool isPlayer, float lifetime = -1.0f);
 
-    // 每幀更新：移動、檢查碰牆/越界/壽命、同步渲染
-    void Update(float dt, glm::vec2 cameraPos);
+    // 每幀更新：移動、碰牆/越界/壽命/實體碰撞、同步渲染
+    void Update(float dt, glm::vec2 cameraPos, Player* player, EnemyManager* enemyMgr);
 
     // 停用子彈（碰牆、碰到目標、壽命結束時呼叫）
     void Deactivate(Bullet* b);

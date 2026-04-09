@@ -17,8 +17,11 @@ void EnemyManager::SetTarget(Player* player) {
 
 void EnemyManager::Update(float dt) {
     for (auto& e : m_Enemies) {
-        if (!e->IsDead())
-            e->Update(dt);
+        if (e->IsDead()) {
+            e->SetVisible(false);  // 死亡後立即隱藏（Step 2.4 補死亡動畫）
+            continue;
+        }
+        e->Update(dt);
     }
 }
 

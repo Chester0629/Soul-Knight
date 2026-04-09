@@ -52,7 +52,7 @@ void App::Update() {
     Camera::Update(m_Player->GetWorldPos());
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
-    m_BulletManager.Update(dt, Camera::GetPosition());
+    m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
     m_Room.SyncTransforms(Camera::GetPosition());
 
     m_Root.Update();

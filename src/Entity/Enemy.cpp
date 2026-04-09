@@ -1,16 +1,34 @@
 #include "Entity/Enemy.hpp"
 
+#include "Entity/Player.hpp"
 #include "System/CollisionSystem.hpp"
 #include "Weapon/BulletManager.hpp"
 #include "World/Camera.hpp"
+
+#include <cmath>
 
 // ─── Enemy::Update ────────────────────────────────────────────────────────────
 
 void Enemy::Update(float dt) {
     if (m_AttackCooldown > 0.0f)
         m_AttackCooldown -= dt;
+    if (m_ContactTimer > 0.0f)
+        m_ContactTimer -= dt;
 
     UpdateAI(dt);
+
+    // 接觸傷害：任何敵人的 AABB 與玩家重疊時扣血（0.5s CD）
+    if (m_Target && !m_Target->IsDead() && m_ContactTimer <= 0.0f) {
+        const glm::vec2 pCenter = m_Target->GetWorldPos() + glm::vec2{0.0f, Player::HIT_OFFSET_Y};
+        const glm::vec2 pHalf   = {Player::HIT_W * 0.5f, Player::HIT_H * 0.5f};
+
+        if (std::abs(m_WorldPos.x - pCenter.x) < m_HitboxHalf.x + pHalf.x &&
+            std::abs(m_WorldPos.y - pCenter.y) < m_HitboxHalf.y + pHalf.y) {
+            m_Target->TakeDamage(CONTACT_DAMAGE);
+            m_ContactTimer = CONTACT_COOLDOWN;
+        }
+    }
+
     SyncRender(Camera::GetPosition());
 }
 

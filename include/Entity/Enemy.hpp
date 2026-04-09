@@ -13,13 +13,22 @@ public:
     void SetTarget(Player* player) { m_Target = player; }
     void SetElite(bool elite)      { m_IsElite = elite; }
 
+    // 供 BulletManager 碰撞偵測使用
+    glm::vec2 GetHitboxHalf() const { return m_HitboxHalf; }
+
     static constexpr int   BASE_HP    = 8;
     static constexpr float BASE_SPEED = 150.0f;
+
+    // 接觸傷害（全體敵人）
+    static constexpr float CONTACT_COOLDOWN = 0.5f;
+    static constexpr int   CONTACT_DAMAGE   = 1;
 
 protected:
     Player* m_Target         = nullptr;
     bool    m_IsElite        = false;
     float   m_AttackCooldown = 0.0f;
+    float   m_ContactTimer   = 0.0f;   // 接觸傷害冷卻計時
+    glm::vec2 m_HitboxHalf   = {16.0f, 14.0f};  // 預設 GoblinEnemy 的半碰撞盒
 
     virtual void UpdateAI(float dt) = 0;
 };

@@ -19,9 +19,10 @@ void SpearGoblin::UpdateAI(float dt) {
     if (dist > 0.01f)
         m_Transform.scale.x = (toPlayer.x < 0.0f) ? -3.0f : 3.0f;
 
-    // ── 突刺攻擊（Step 2.3 前為空操作） ──────────────────────────────────────
-    if (dist <= m_StabRange && m_AttackCooldown <= 0.0f) {
-        // TODO (Step 2.3): 展開突刺碰撞盒，對 hitbox 內的玩家造成傷害
+    // ── 突刺攻擊：在刺擊範圍內直接造成傷害 ──────────────────────────────────
+    if (dist <= m_StabRange && m_AttackCooldown <= 0.0f && m_Target) {
+        const int dmg = m_IsElite ? 3 : 3;  // 普通/精英均為 3
+        m_Target->TakeDamage(dmg);
         m_AttackCooldown = COOLDOWN;
     }
 }
