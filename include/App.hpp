@@ -5,6 +5,7 @@
 #include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
 #include "Room.hpp"
+#include "UI/HUD.hpp"
 #include "Util/Renderer.hpp"
 #include "Weapon/BulletManager.hpp"
 
@@ -31,4 +32,5 @@ private:
     BulletManager  m_BulletManager;
     std::shared_ptr<Player> m_Player;
     EnemyManager m_EnemyManager;
+    HUD          m_HUD;
 };

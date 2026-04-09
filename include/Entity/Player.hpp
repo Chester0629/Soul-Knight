@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Entity/Entity.hpp"
+#include <algorithm>
 #include "Weapon/BulletManager.hpp"
 #include "Weapon/Weapon.hpp"
 #include "Util/Animation.hpp"
@@ -19,6 +20,13 @@ class Player : public Entity {
 public:
     explicit Player(BulletManager* bulletMgr);
     void Update(float dt) override;
+    void TakeDamage(int damage) override {
+        // 先扣護盾，護盾扣完再扣血
+        const int shieldAbsorb = std::min(damage, m_Shield);
+        m_Shield -= shieldAbsorb;
+        m_HP     -= (damage - shieldAbsorb);
+        m_ShieldRegenTimer = 0.0f;  // 受傷重置護盾回復計時
+    }
 
     static constexpr float SPEED        = 300.0f;
     static constexpr float INITIAL_X    = -300.0f;
@@ -31,6 +39,8 @@ public:
     bool      IsFacingLeft()   const { return m_FacingLeft; }
     int       GetHP()          const { return m_HP; }
     int       GetMaxHP()       const { return m_MaxHP; }
+    int       GetShield()      const { return m_Shield; }
+    int       GetMaxShield()   const { return m_MaxShield; }
     int       GetEnergy()      const { return m_Energy; }
     int       GetMaxEnergy()   const { return m_MaxEnergy; }
 
@@ -53,6 +63,10 @@ private:
     bool      m_FacingLeft  = false;
     glm::vec2 m_LastMoveDir = {1.0f, 0.0f};
 
+    int   m_Shield         = 4;
+    int   m_MaxShield      = 10;
+    float m_ShieldRegenTimer = 0.0f;
+    static constexpr float SHIELD_REGEN_INTERVAL = 3.0f;  // 每 3 秒回復 1 點
     int m_Energy    = 200;
     int m_MaxEnergy = 200;
 };

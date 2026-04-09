@@ -35,7 +35,7 @@ void BulletManager::Spawn(glm::vec2 worldPos, glm::vec2 dir, float speed,
     // 依速度方向旋轉（atan2 回傳弧度，PTSD rotation 為角度）
     if (glm::length(dir) > 0.0f) {
         const glm::vec2 nd = glm::normalize(dir);
-        b->m_Transform.rotation = glm::degrees(std::atan2(nd.y, nd.x));
+        b->m_Transform.rotation = std::atan2(nd.y, nd.x);
     }
 }
 

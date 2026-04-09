@@ -53,11 +53,36 @@ GoblinEnemy::GoblinEnemy(BulletManager* bulletMgr)
         },
         true, 150, true, 0
     );
+
+    // 死亡動畫：同樣 7 幀，非循環、快速播放一次
+    m_DeathAnim = std::make_shared<Util::Animation>(
+        std::vector<std::string>{
+            RESOURCE_DIR "/Enemies/enemy22_0.png",
+            RESOURCE_DIR "/Enemies/enemy22_1.png",
+            RESOURCE_DIR "/Enemies/enemy22_2.png",
+            RESOURCE_DIR "/Enemies/enemy22_3.png",
+            RESOURCE_DIR "/Enemies/enemy22_4.png",
+            RESOURCE_DIR "/Enemies/enemy22_5.png",
+            RESOURCE_DIR "/Enemies/enemy22_6.png",
+        },
+        false, 60, false, 0   // play=false（手動觸發），60ms/幀，不循環
+    );
+
     SetDrawable(m_Anim);
     m_Transform.scale = {3.0f, 3.0f};
     SetVisible(true);
     UpdateZIndex();
     SyncRenderTransform(Camera::GetPosition());
+}
+
+void GoblinEnemy::StartDying() {
+    m_IsDying = true;
+    SetDrawable(m_DeathAnim);
+    m_DeathAnim->Play();
+}
+
+bool GoblinEnemy::IsDeathDone() const {
+    return m_DeathAnim->GetState() == Util::Animation::State::ENDED;
 }
 
 void GoblinEnemy::TryMove(glm::vec2 wishDir, float speed, float dt) {

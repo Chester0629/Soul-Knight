@@ -13,6 +13,7 @@ set(SRC_FILES
     Weapon/Bullet.cpp
     Weapon/BulletManager.cpp
     Weapon/Weapon.cpp
+    UI/HUD.cpp
 )
 
 set(INCLUDE_FILES
@@ -28,6 +29,7 @@ set(INCLUDE_FILES
     Weapon/Bullet.hpp
     Weapon/BulletManager.hpp
     Weapon/Weapon.hpp
+    UI/HUD.hpp
 )
 
 set(TEST_FILES

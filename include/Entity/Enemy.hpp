@@ -16,6 +16,11 @@ public:
     // 供 BulletManager 碰撞偵測使用
     glm::vec2 GetHitboxHalf() const { return m_HitboxHalf; }
 
+    // 死亡動畫狀態
+    bool IsDying()  const { return m_IsDying; }
+    virtual bool IsDeathDone() const { return true; }   // 預設：立即完成
+    virtual void StartDying()  { m_IsDying = true; SetVisible(false); }
+
     static constexpr int   BASE_HP    = 8;
     static constexpr float BASE_SPEED = 150.0f;
 
@@ -26,6 +31,7 @@ public:
 protected:
     Player* m_Target         = nullptr;
     bool    m_IsElite        = false;
+    bool    m_IsDying        = false;  // 正在播放死亡動畫
     float   m_AttackCooldown = 0.0f;
     float   m_ContactTimer   = 0.0f;   // 接觸傷害冷卻計時
     glm::vec2 m_HitboxHalf   = {16.0f, 14.0f};  // 預設 GoblinEnemy 的半碰撞盒
@@ -39,6 +45,9 @@ class GoblinEnemy : public Enemy {
 public:
     explicit GoblinEnemy(BulletManager* bulletMgr);
 
+    bool IsDeathDone() const override;
+    void StartDying()  override;
+
 protected:
     BulletManager* m_BulletMgr = nullptr;  // 注入，不擁有
 
@@ -49,6 +58,7 @@ protected:
 
 private:
     std::shared_ptr<Util::Animation> m_Anim;
+    std::shared_ptr<Util::Animation> m_DeathAnim;
 };
 
 // ─── PistolGoblin ─────────────────────────────────────────────────────────────

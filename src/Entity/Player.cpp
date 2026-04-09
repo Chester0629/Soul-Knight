@@ -1,6 +1,7 @@
 #include "Entity/Player.hpp"
 
 #include "System/CollisionSystem.hpp"
+#include <algorithm>
 #include "Util/Image.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
@@ -117,6 +118,17 @@ void Player::UpdateWeaponSpriteTransform() {
 void Player::Update(float dt) {
     HandleInput(dt);
     TryShoot(dt);
+
+    // 護盾自動回復（每 SHIELD_REGEN_INTERVAL 秒 +1，上限 m_MaxShield）
+    if (m_Shield < m_MaxShield) {
+        m_ShieldRegenTimer += dt;
+        if (m_ShieldRegenTimer >= SHIELD_REGEN_INTERVAL) {
+            m_ShieldRegenTimer -= SHIELD_REGEN_INTERVAL;
+            m_Shield = std::min(m_Shield + 1, m_MaxShield);
+        }
+    } else {
+        m_ShieldRegenTimer = 0.0f;
+    }
 
     CollisionSystem::ResolveWall(
         m_WorldPos,

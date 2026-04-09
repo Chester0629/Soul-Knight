@@ -18,8 +18,12 @@ void EnemyManager::SetTarget(Player* player) {
 void EnemyManager::Update(float dt) {
     for (auto& e : m_Enemies) {
         if (e->IsDead()) {
-            e->SetVisible(false);  // 死亡後立即隱藏（Step 2.4 補死亡動畫）
-            continue;
+            if (!e->IsDying()) {
+                e->StartDying();        // 首次死亡：啟動死亡動畫
+            } else if (e->IsDeathDone()) {
+                e->SetVisible(false);   // 動畫播完：隱藏
+            }
+            continue;                   // 死亡中不執行 AI
         }
         e->Update(dt);
     }
