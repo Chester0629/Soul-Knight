@@ -9,7 +9,7 @@
 BulletManager::BulletManager() {
     m_Bullets.reserve(MAX_BULLETS);
     for (int i = 0; i < MAX_BULLETS; ++i)
-        m_Bullets.push_back(std::make_unique<Bullet>());
+        m_Bullets.push_back(std::make_shared<Bullet>());
 }
 
 Bullet* BulletManager::GetInactive() {

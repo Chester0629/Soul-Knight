@@ -33,13 +33,13 @@ public:
     // 將全部 100 顆 Bullet GameObject 加入渲染樹（App::Start 呼叫一次）
     void AddToRenderer(Util::Renderer& root);
 
-    const std::vector<std::unique_ptr<Bullet>>& GetBullets() const { return m_Bullets; }
+    const std::vector<std::shared_ptr<Bullet>>& GetBullets() const { return m_Bullets; }
 
     static constexpr int   MAX_BULLETS  = 100;
     static constexpr float OUT_OF_RANGE = 2000.0f;  // 超出此距離視為越界
 
 private:
-    std::vector<std::unique_ptr<Bullet>> m_Bullets;
+    std::vector<std::shared_ptr<Bullet>> m_Bullets;
 
     // 從池中取得一顆非活躍子彈；池滿時回傳 nullptr（靜默丟棄）
     Bullet* GetInactive();
