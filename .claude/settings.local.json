@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"^weapons2_78\\\\.png$\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File copy_assets.ps1)",
+      "Bash(cmake -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" MAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin/mingw32-make.exe\" MINGW_DIR=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin\" __NEW_LINE_068437ab37f7ca2d__ cd \"D:/Soul Knight/project\" \"$CMAKE\" -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_MAKE_PROGRAM=\"$MAKE\" -DCMAKE_C_COMPILER=\"$MINGW_DIR/gcc.exe\" -DCMAKE_CXX_COMPILER=\"$MINGW_DIR/g++.exe\")",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" cd \"D:/Soul Knight/project\" \"$CMAKE\" --build build --config Debug)",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" MINGW_BIN=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin\" export PATH=\"$MINGW_BIN:$PATH\" __NEW_LINE_2f89f2c13524f306__ cd \"D:/Soul Knight/project\" \"$CMAKE\" -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" MINGW_BIN=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin\" export PATH=\"$MINGW_BIN:$PATH\" __NEW_LINE_23292462fe7e7758__ cd \"D:/Soul Knight/project\" \"$CMAKE\" -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" --version)",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" MINGW_BIN=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin\" export PATH=\"$MINGW_BIN:$PATH\" __NEW_LINE_0f1530e7b16693a2__ cd \"D:/Soul Knight/project\" \"$CMAKE\" -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(CMAKE=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/cmake/win/x64/bin/cmake.exe\" MINGW_BIN=\"/c/Program Files/JetBrains/CLion 2024.3.5/bin/mingw/bin\" export PATH=\"$MINGW_BIN:$PATH\" cd \"D:/Soul Knight/project\" \"$CMAKE\" -S . -B build -G \"MinGW Makefiles\" -DCMAKE_BUILD_TYPE=Debug)",
+      "Bash(find 'D:/Soul Knight/project/PTSD/src' -name *.cpp)",
+      "Bash(python3:*)",
+      "Bash(python -c \":*)",
+      "Bash(powershell -Command \"Add-Type -AssemblyName System.Drawing; foreach \\($t in @\\(''w001'',''w004'',''f101''\\)\\) { $img = [System.Drawing.Image]::FromFile\\(''D:/Soul Knight/project/Resources/Tiles/'' + $t + ''.png''\\); Write-Host \\($t + '': '' + $img.Width + ''x'' + $img.Height + '' px''\\); $img.Dispose\\(\\) }\")",
+      "Bash(grep -r \"WindowSize\\\\|windowSize\\\\|WINDOW\\\\|window_size\\\\|width.*height\\\\|800\\\\|1280\\\\|960\\\\|SCREEN\" 'D:/Soul Knight/project/PTSD/src' --include=*.cpp --include=*.hpp -l)",
+      "Bash(python:*)",
+      "Bash(mkdir -p \"D:\\\\Soul Knight\\\\project\\\\include\\\\System\")",
+      "Bash(mkdir -p \"D:\\\\Soul Knight\\\\project\\\\src\\\\System\")"
+    ]
+  }
+}

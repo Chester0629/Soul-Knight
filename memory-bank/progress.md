@@ -6,8 +6,8 @@
 
 ## 當前狀態
 
-- **目前里程碑**: M1 完成 ✅
-- **下一步**: **M2 Step 2.1 — 敵人基礎類別**
+- **目前里程碑**: M3 進行中
+- **下一步**: **M3 Step 3.3 門的生成邏輯**
 
 ---
 
@@ -37,10 +37,10 @@
 
 | Step | 狀態 | 說明 |
 |------|------|------|
-| 2.1 敵人基礎類別 | ⬜ 待做 | Enemy 基類 + GoblinEnemy + 3 種哥布林（Pistol/Spear/Archer），HP=8，Speed=150 |
-| 2.2 武器與子彈系統 | ⬜ 待做 | BulletManager 對象池（上限100），手槍為初始武器，J 鍵攻擊 |
-| 2.3 碰撞系統擴充 | ⬜ 待做 | 子彈↔敵人/牆壁，敵人接觸傷害（0.5s Cooldown） |
-| 2.4 玩家血量/能量 + HUD | ⬜ 待做 | 素材圖片血量條+能量條（最大200），敵人死亡動畫，GameOver 觸發 |
+| 2.1 敵人基礎類別 | ✅ 完成 | Enemy 基類 + GoblinEnemy + 3 種哥布林（Pistol/Spear/Archer），HP=8，Speed=150；驗收通過 |
+| 2.2 武器與子彈系統 | ✅ 完成 | BulletManager 對象池（上限100），手槍為初始武器，J 鍵攻擊；驗收通過 |
+| 2.3 碰撞系統擴充 | ✅ 完成 | 子彈↔敵人/牆壁，接觸傷害（0.5s CD），3種哥布林攻擊實裝 |
+| 2.4 玩家血量/能量 + HUD | ✅ 完成 | ui_15面板(scale4)+三條bar(HP/護盾/能量)；護盾先吸傷害；敵人死亡動畫；GameOver觸發 |
 
 ---
 
@@ -48,8 +48,8 @@
 
 | Step | 狀態 | 說明 |
 |------|------|------|
-| 3.1 多種房間模板 | ⬜ 待做 | 3–5種模板，最小15×10，最大30×20 |
-| 3.2 地城生成演算法 | ⬜ 待做 | 樹狀/網狀，6–9房間，走廊銜接 |
+| 3.1 多種房間模板 | ✅ 完成 | 5種模板(SPAWN/SMALL/MEDIUM/LARGE/WIDE)，RoomTemplate enum，m_GridPos/m_WorldOffset，啟動隨機選擇 |
+| 3.2 地城生成演算法 | ✅ 完成 | DungeonGenerator(5×5網格/隨機seed)、Corridor(水平/垂直)、World(多房間碰撞)；CollisionSystem改為World多房間版 |
 | 3.3 門的生成邏輯 | ⬜ 待做 | 敵人全清才開門，走廊觸發 Spawn |
 | 3.4 迷你地圖 | ⬜ 待做 | 右中上角，已探索才顯示 |
 
@@ -79,10 +79,41 @@
 
 ## 開發日誌
 
+### 2026-04-10
+- ✅ Step 3.2 實作完成，編譯通過（零 warning）
+  - 新增 `include/World/DungeonGenerator.hpp` + `src/World/DungeonGenerator.cpp`
+    - 5×5 網格地城佈局；普通層 Spawn→2 Basic→Portal，Boss 層多一 Basic
+    - 50% 機率額外輔助房間（Chest/Extra）生成於 Basic 相鄰格
+    - std::mt19937(seed) 確保可重現性
+  - 新增 `include/World/Corridor.hpp` + `src/World/Corridor.cpp`
+    - 水平走廊（rows=8固定，cols可變）；垂直走廊（cols=8固定，rows可變）
+    - 與 Room 使用相同座標換算公式（含 worldOffset）
+  - 新增 `include/World/World.hpp` + `src/World/World.cpp`
+    - 持有所有 Room + Corridor，統一 AddToRenderer/SyncTransforms
+    - 多房間 AABB 碰撞：ResolveWall / IsBlocked 均迭代所有 Room + Corridor
+    - GRID_SPACING_X=1728, GRID_SPACING_Y=1296（36/27 tiles）
+  - 修改 `include/Room.hpp` + `src/Room.cpp`：加入 `Direction` enum + `OpenDoor()`
+  - 修改 `include/System/CollisionSystem.hpp` + `src/System/CollisionSystem.cpp`：改為 SetWorld(World*)
+  - 修改 `include/App.hpp` + `src/App.cpp`：使用 World 取代單一 Room
+  - 更新 `files.cmake`：登記三個新 .cpp/.hpp
+
 ### 2026-03-27
 - ✅ Step 1.5 驗收通過：玩家無法穿牆，沿牆滑行正常，南牆正確遮擋玩家
 - 🔧 同日 Bug 修正：HIT_W 24→44（視覺對齊）；SouthFaceTile clamp 50→98；SouthWallCap Z=97.5f
 - ➡️ M1 全部完成，下一步：M2 Step 2.1 敵人基礎類別
+- 🔄 Step 2.1 實作完成，等待驗收
+  - 新增 `include/Entity/Enemy.hpp`：Enemy + GoblinEnemy + PistolGoblin + SpearGoblin + ArcherGoblin
+  - 新增 `include/Entity/EnemyManager.hpp`
+  - 新增 `src/Entity/Enemy.cpp`：Enemy::Update + GoblinEnemy 建構子 + TryMove 避障
+  - 新增 `src/Entity/PistolGoblin.cpp`：保距 AI（MIN_DIST=100, PREF=200）+ 攻擊 stub
+  - 新增 `src/Entity/SpearGoblin.cpp`：追蹤 AI + 突刺 stub（stab range=60）
+  - 新增 `src/Entity/ArcherGoblin.cpp`：保距 + AIM/COOLDOWN 狀態機 + 射箭 stub
+  - 新增 `src/Entity/EnemyManager.cpp`
+  - 修改 `Entity/Entity.hpp`：加入 SetWorldPos() public 方法
+  - 修改 `App.hpp`：加入 EnemyManager 成員
+  - 修改 `App.cpp`：生成 3 隻測試哥布林（PistolGoblin/SpearGoblin/ArcherGoblin）
+  - 攻擊相關為 TODO stub，Step 2.3 實作子彈整合
+  - 更新順序：Camera 更新後才呼叫 EnemyManager::Update，確保 SyncRender 使用正確相機
 
 ### 2026-03-26
 - 🔄 Step 1.5 實作完成，等待驗收
@@ -178,6 +209,19 @@
 | NorthFaceTile 素材 | 使用 w001.png（非 w004），與 WallTile 視覺一致；只有 SouthFaceTile 才用 w004 | ✅ 已確認（2026-03-25 修正）|
 | PTSD Z-Index 限制 | nearClip=-100, farClip=100，Z 必須在 (-100,100)。舊設計 [2,198]/199/200 全錯，已修正為 clamp[2,98]/99/99.5 | ✅ 根本 Bug（2026-03-25 發現修正）|
 | 子彈使用 Object Pool | 上限 100，確認實作 | ⬜ 待實作 |
+| Player/GoblinEnemy 持有 BulletManager* | 建構時注入，不透過 Update 參數傳遞 | ✅ 已定案 |
+| SpearGoblin 突刺 | 速度 0 靜態子彈，lifetime=0.3f，isPlayer=false | ✅ 已定案 |
+| Bullet lifetime 機制 | Spawn() 加 lifetime 參數（預設-1=不限時），BulletManager::Update() 倒數 Deactivate | ✅ 已定案 |
+| 武器觸發方式 | 基類 IsKeyPressed(J)+FireRate；GunWeapon 額外 IsKeyDown(J) 可突破射速 | ✅ 已定案 |
+| 武器替換行為 | 撿起新武器時舊武器掉落地板，地板同時只有 1 把 | ✅ 已定案 |
+| 敵人所有權 | EnemyManager 擁有（unique_ptr），Room 持 raw pointer 參照 | ✅ 已定案 |
+| 走廊實作 | 細長 Room（重用 Room 架構），無敵人，IsCleared()=true | ✅ 已定案 |
+| 房間切換觸發 | World 每幀比對玩家 WorldPos 與所有 Room AABB | ✅ 已定案 |
+| 迷你地圖渲染 | 每個 Room 對應一個 GameObject，SetVisible 控制顯示 | ✅ 已定案 |
+| Boss 衝刺方向 | 朝玩家當前位置（不限橫向） | ✅ 已定案 |
+| 狀態重置 | 各系統實作 Reset()，GameManager 統一呼叫 | ✅ 已定案 |
+| 角色差異設計 | Player 基類 + CharacterC01/C02/C03 子類，覆寫 ActivateSkill() | ✅ 已定案 |
+| 升級資源 | 跨局保留貨幣，選角前在升級室消費；每局死亡不歸零 | ✅ 已定案 |
 | 地城生成演算法 | 樹狀/網狀，6–9房間，走廊銜接 | ⬜ 待 M3 實作 |
 | Tile 效能優化 | M1 先用一般 GameObject；卡頓時 M3 後合併大 Texture | ⬜ 待觀察 |
 | 音效 | 需要，PTSD 支援，M4/M5 實作 | ⬜ 待做 |

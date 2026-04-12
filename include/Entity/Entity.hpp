@@ -22,6 +22,7 @@ public:
     virtual bool IsDead() const { return m_HP <= 0; }
 
     glm::vec2 GetWorldPos() const { return m_WorldPos; }
+    void      SetWorldPos(glm::vec2 pos) { m_WorldPos = pos; }
 
     // 渲染同步（供 App 在 Camera 更新後呼叫）
     // 正確順序：UpdatePhysics → Camera::Update → SyncRender

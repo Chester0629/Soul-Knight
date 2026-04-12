@@ -3,8 +3,20 @@ set(SRC_FILES
     Tile.cpp
     Room.cpp
     Entity/Player.cpp
+    Entity/Enemy.cpp
+    Entity/PistolGoblin.cpp
+    Entity/SpearGoblin.cpp
+    Entity/ArcherGoblin.cpp
+    Entity/EnemyManager.cpp
     World/Camera.cpp
+    World/DungeonGenerator.cpp
+    World/Corridor.cpp
+    World/World.cpp
     System/CollisionSystem.cpp
+    Weapon/Bullet.cpp
+    Weapon/BulletManager.cpp
+    Weapon/Weapon.cpp
+    UI/HUD.cpp
 )
 
 set(INCLUDE_FILES
@@ -13,8 +25,17 @@ set(INCLUDE_FILES
     Room.hpp
     Entity/Entity.hpp
     Entity/Player.hpp
+    Entity/Enemy.hpp
+    Entity/EnemyManager.hpp
     World/Camera.hpp
+    World/DungeonGenerator.hpp
+    World/Corridor.hpp
+    World/World.hpp
     System/CollisionSystem.hpp
+    Weapon/Bullet.hpp
+    Weapon/BulletManager.hpp
+    Weapon/Weapon.hpp
+    UI/HUD.hpp
 )
 
 set(TEST_FILES

@@ -2,9 +2,12 @@
 
 #include "pch.hpp" // IWYU pragma: export
 
+#include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
-#include "Room.hpp"
+#include "UI/HUD.hpp"
 #include "Util/Renderer.hpp"
+#include "Weapon/BulletManager.hpp"
+#include "World/World.hpp"
 
 class App {
 public:
@@ -24,8 +27,11 @@ private:
     State m_CurrentState = State::START;
 
     Util::Renderer m_Root;
-    // 初始房間：17×17 含牆（地板 15×15）
-    Room m_Room{RoomSpec::START_W, RoomSpec::START_H};
-    // 玩家（Step 1.3）
-    std::shared_ptr<Player> m_Player;
+    World          m_World;          // Step 3.2+：多房間地城世界
+
+    // BulletManager 必須在 Player/EnemyManager 前宣告，確保生命週期
+    BulletManager            m_BulletManager;
+    std::shared_ptr<Player>  m_Player;
+    EnemyManager             m_EnemyManager;
+    HUD                      m_HUD;
 };

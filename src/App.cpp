@@ -1,5 +1,6 @@
 #include "App.hpp"
 
+#include "Entity/Enemy.hpp"
 #include "System/CollisionSystem.hpp"
 #include "Util/Input.hpp"
 #include "Util/Keycode.hpp"
@@ -7,19 +8,51 @@
 #include "Util/Time.hpp"
 #include "World/Camera.hpp"
 
+#include <cstdlib>
+#include <ctime>
+
 void App::Start() {
     LOG_TRACE("Start");
 
-    // Step 1.2：測試用初始房間（17×17 含牆，地板 15×15）
-    m_Room.AddToRenderer(m_Root);
-    m_Room.SyncTransforms({0.0f, 0.0f});
+    // Step 3.2：生成多房間地城（隨機 seed）
+    const unsigned seed = static_cast<unsigned>(std::time(nullptr));
+    m_World.Generate(seed, 1);
+    m_World.AddToRenderer(m_Root);
 
-    // Step 1.5：設定碰撞系統的目標房間
-    CollisionSystem::SetRoom(&m_Room);
+    // CollisionSystem 改為 World 版本
+    CollisionSystem::SetWorld(&m_World);
 
-    // Step 1.3：玩家
-    m_Player = std::make_shared<Player>();
+    // Step 2.2：子彈對象池加入渲染樹
+    m_BulletManager.AddToRenderer(m_Root);
+
+    // 玩家：出生於 Spawn 房間中心
+    m_Player = std::make_shared<Player>(&m_BulletManager);
+    m_Player->SetWorldPos(m_World.GetSpawnPos());
     m_Root.AddChild(m_Player);
+    m_Player->AddWeaponSpriteToRenderer(m_Root);
+
+    // 測試哥布林（相對於 Spawn 房間中心偏移）
+    {
+        const glm::vec2 spawnCenter = m_World.GetSpawnPos();
+
+        auto pistol = std::make_shared<PistolGoblin>(&m_BulletManager);
+        pistol->SetWorldPos(spawnCenter + glm::vec2{200.0f,  100.0f});
+
+        auto spear = std::make_shared<SpearGoblin>(&m_BulletManager);
+        spear->SetWorldPos(spawnCenter + glm::vec2{-150.0f,  50.0f});
+
+        auto archer = std::make_shared<ArcherGoblin>(&m_BulletManager);
+        archer->SetWorldPos(spawnCenter + glm::vec2{0.0f, -150.0f});
+
+        m_EnemyManager.AddEnemy(pistol);
+        m_EnemyManager.AddEnemy(spear);
+        m_EnemyManager.AddEnemy(archer);
+        m_EnemyManager.AddToRenderer(m_Root);
+        m_EnemyManager.SetTarget(m_Player.get());
+    }
+
+    // HUD 最後加入（確保 Z 在最上層）
+    m_HUD.AddToRenderer(m_Root);
 
     m_CurrentState = State::UPDATE;
 }
@@ -27,20 +60,24 @@ void App::Start() {
 void App::Update() {
     const float dt = Util::Time::GetDeltaTimeMs() / 1000.0f;
 
-    // 每幀更新順序（Step 1.3 + 1.4）：
-    //   1. 玩家輸入 + 物理移動（更新 m_WorldPos）
-    //   2. 相機跟隨玩家新位置（即時，無 Lerp）
-    //   3. 玩家渲染同步（此時 camera 已是最新值，玩家完美置中）
-    //   4. 房間渲染同步
     m_Player->Update(dt);
     Camera::Update(m_Player->GetWorldPos());
     m_Player->SyncRender(Camera::GetPosition());
-    m_Room.SyncTransforms(Camera::GetPosition());
+    m_EnemyManager.Update(dt);
+    m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
+    m_World.SyncTransforms(Camera::GetPosition());
 
-    // 渲染所有 GameObject（依 Z-index 排序）
+    m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),
+                 m_Player->GetShield(), m_Player->GetMaxShield(),
+                 m_Player->GetEnergy(), m_Player->GetMaxEnergy());
+
     m_Root.Update();
 
-    // ESC 或關閉視窗 → 結束
+    if (m_Player->IsDead()) {
+        m_CurrentState = State::END;
+        return;
+    }
+
     if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||
         Util::Input::IfExit()) {
         m_CurrentState = State::END;
