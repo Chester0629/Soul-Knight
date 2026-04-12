@@ -6,6 +6,9 @@
 #include <memory>
 #include <vector>
 
+// 四方向（5×5 網格：row 向下遞增，col 向右遞增；PTSD Y 軸向上為正）
+enum class Direction { NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3 };
+
 // ── 房間模板（含牆總格數）────────────────────────────────────────────────────
 // 牆壁結構（北/南各 2 行，左/右各 1 列）：
 //   Row 0          : WallTile cap  (w001，通常超出螢幕)
@@ -51,6 +54,10 @@ public:
 
     void AddToRenderer(Util::Renderer& renderer);
     void SyncTransforms(glm::vec2 cameraPos);
+
+    // 開門：將指定方向邊牆中央 6 格替換為 FloorTile（Step 3.2 走廊銜接）
+    // ⚠️ 必須在 AddToRenderer 之前呼叫，否則舊 WallTile 仍留在 Renderer
+    void OpenDoor(Direction dir);
 
     bool IsWallAt(int row, int col) const;
     int GetCols()  const { return m_Cols; }

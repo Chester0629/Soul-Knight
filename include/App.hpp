@@ -4,10 +4,10 @@
 
 #include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
-#include "Room.hpp"
 #include "UI/HUD.hpp"
 #include "Util/Renderer.hpp"
 #include "Weapon/BulletManager.hpp"
+#include "World/World.hpp"
 
 class App {
 public:
@@ -27,10 +27,11 @@ private:
     State m_CurrentState = State::START;
 
     Util::Renderer m_Root;
-    std::unique_ptr<Room> m_Room;   // Step 3.1+：動態建立，支援多模板
+    World          m_World;          // Step 3.2+：多房間地城世界
+
     // BulletManager 必須在 Player/EnemyManager 前宣告，確保生命週期
-    BulletManager  m_BulletManager;
-    std::shared_ptr<Player> m_Player;
-    EnemyManager m_EnemyManager;
-    HUD          m_HUD;
+    BulletManager            m_BulletManager;
+    std::shared_ptr<Player>  m_Player;
+    EnemyManager             m_EnemyManager;
+    HUD                      m_HUD;
 };

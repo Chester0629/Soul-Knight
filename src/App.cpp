@@ -14,36 +14,35 @@
 void App::Start() {
     LOG_TRACE("Start");
 
-    // Step 3.1：隨機選擇房間模板（每次執行不同房間）
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
-    const auto tmpl = static_cast<RoomTemplate>(
-        std::rand() % static_cast<int>(RoomTemplate::COUNT)
-    );
-    m_Room = std::make_unique<Room>(tmpl);
+    // Step 3.2：生成多房間地城（隨機 seed）
+    const unsigned seed = static_cast<unsigned>(std::time(nullptr));
+    m_World.Generate(seed, 1);
+    m_World.AddToRenderer(m_Root);
 
-    m_Room->AddToRenderer(m_Root);
-    m_Room->SyncTransforms({0.0f, 0.0f});
+    // CollisionSystem 改為 World 版本
+    CollisionSystem::SetWorld(&m_World);
 
-    CollisionSystem::SetRoom(m_Room.get());
-
-    // Step 2.2：子彈對象池加入渲染樹（100 顆 GameObject 一次性加入）
+    // Step 2.2：子彈對象池加入渲染樹
     m_BulletManager.AddToRenderer(m_Root);
 
-    // 玩家（注入 BulletManager*）
+    // 玩家：出生於 Spawn 房間中心
     m_Player = std::make_shared<Player>(&m_BulletManager);
+    m_Player->SetWorldPos(m_World.GetSpawnPos());
     m_Root.AddChild(m_Player);
     m_Player->AddWeaponSpriteToRenderer(m_Root);
 
-    // 測試哥布林（注入 BulletManager*）
+    // 測試哥布林（相對於 Spawn 房間中心偏移）
     {
+        const glm::vec2 spawnCenter = m_World.GetSpawnPos();
+
         auto pistol = std::make_shared<PistolGoblin>(&m_BulletManager);
-        pistol->SetWorldPos({200.0f, 100.0f});
+        pistol->SetWorldPos(spawnCenter + glm::vec2{200.0f,  100.0f});
 
         auto spear = std::make_shared<SpearGoblin>(&m_BulletManager);
-        spear->SetWorldPos({-150.0f, 50.0f});
+        spear->SetWorldPos(spawnCenter + glm::vec2{-150.0f,  50.0f});
 
         auto archer = std::make_shared<ArcherGoblin>(&m_BulletManager);
-        archer->SetWorldPos({0.0f, -150.0f});
+        archer->SetWorldPos(spawnCenter + glm::vec2{0.0f, -150.0f});
 
         m_EnemyManager.AddEnemy(pistol);
         m_EnemyManager.AddEnemy(spear);
@@ -52,7 +51,7 @@ void App::Start() {
         m_EnemyManager.SetTarget(m_Player.get());
     }
 
-    // HUD 加入渲染樹（最後加入，確保 Z-Index 在最上層）
+    // HUD 最後加入（確保 Z 在最上層）
     m_HUD.AddToRenderer(m_Root);
 
     m_CurrentState = State::UPDATE;
@@ -66,16 +65,14 @@ void App::Update() {
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
     m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
-    m_Room->SyncTransforms(Camera::GetPosition());
+    m_World.SyncTransforms(Camera::GetPosition());
 
-    // HUD 每幀同步玩家血量與能量
     m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),
                  m_Player->GetShield(), m_Player->GetMaxShield(),
                  m_Player->GetEnergy(), m_Player->GetMaxEnergy());
 
     m_Root.Update();
 
-    // 玩家死亡 → 結束遊戲
     if (m_Player->IsDead()) {
         m_CurrentState = State::END;
         return;

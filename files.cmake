@@ -9,6 +9,9 @@ set(SRC_FILES
     Entity/ArcherGoblin.cpp
     Entity/EnemyManager.cpp
     World/Camera.cpp
+    World/DungeonGenerator.cpp
+    World/Corridor.cpp
+    World/World.cpp
     System/CollisionSystem.cpp
     Weapon/Bullet.cpp
     Weapon/BulletManager.cpp
@@ -25,6 +28,9 @@ set(INCLUDE_FILES
     Entity/Enemy.hpp
     Entity/EnemyManager.hpp
     World/Camera.hpp
+    World/DungeonGenerator.hpp
+    World/Corridor.hpp
+    World/World.hpp
     System/CollisionSystem.hpp
     Weapon/Bullet.hpp
     Weapon/BulletManager.hpp

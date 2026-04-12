@@ -40,7 +40,7 @@ void Room::Build() {
 
             const bool isEdgeCol  = (col == 0 || col == m_Cols - 1);
             const bool isCapRow   = (row == 0);
-            const bool isBaseRow  = (row == m_Rows - 1);
+
             const bool isNFace    = (row == 1);
             const bool isSWallCap = (row == m_Rows - 2);  // row 14：南牆頂蓋（w001）
             const bool isSFace    = (row == m_Rows - 1);  // row 15：南牆面（w004，Y-Sort）
@@ -102,6 +102,45 @@ void Room::SyncTransforms(glm::vec2 cameraPos) {
 
     for (auto& f : m_SouthFaces)
         f->UpdateZIndex();
+}
+
+// ── 開門（Step 3.2）──────────────────────────────────────────────────────────
+// 在指定方向的邊牆中央 6 格改為 FloorTile，供走廊銜接通行
+void Room::OpenDoor(Direction dir) {
+    switch (dir) {
+    case Direction::EAST: {
+        // 東牆：col = m_Cols-1，row 範圍取中央 6 格
+        int rS = (m_Rows - 6) / 2;
+        for (int r = rS; r < rS + 6; r++)
+            m_TileMap[r][m_Cols - 1] = std::make_shared<FloorTile>(TileToWorld(r, m_Cols - 1));
+        break;
+    }
+    case Direction::WEST: {
+        // 西牆：col = 0，row 範圍取中央 6 格
+        int rS = (m_Rows - 6) / 2;
+        for (int r = rS; r < rS + 6; r++)
+            m_TileMap[r][0] = std::make_shared<FloorTile>(TileToWorld(r, 0));
+        break;
+    }
+    case Direction::NORTH: {
+        // 北牆：row 0（cap WallTile）+ row 1（NorthFaceTile），col 取中央 6 格
+        int cS = (m_Cols - 6) / 2;
+        for (int c = cS; c < cS + 6; c++) {
+            m_TileMap[0][c] = std::make_shared<FloorTile>(TileToWorld(0, c));
+            m_TileMap[1][c] = std::make_shared<FloorTile>(TileToWorld(1, c));
+        }
+        break;
+    }
+    case Direction::SOUTH: {
+        // 南牆：row m_Rows-2（SouthWallCap）+ row m_Rows-1（SouthFaceTile），col 取中央 6 格
+        int cS = (m_Cols - 6) / 2;
+        for (int c = cS; c < cS + 6; c++) {
+            m_TileMap[m_Rows - 2][c] = std::make_shared<FloorTile>(TileToWorld(m_Rows - 2, c));
+            m_TileMap[m_Rows - 1][c] = std::make_shared<FloorTile>(TileToWorld(m_Rows - 1, c));
+        }
+        break;
+    }
+    }
 }
 
 // ── 碰撞查詢 ──────────────────────────────────────────────────────────────────
