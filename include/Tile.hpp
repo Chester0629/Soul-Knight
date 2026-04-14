@@ -58,3 +58,18 @@ public:
     // 每幀依 worldY 更新 Z-index（Y-Sort）
     void UpdateZIndex();
 };
+
+// ── 門 Tile（走廊銜接處，可開關）────────────────────────────────────────────
+// 關閉：ww001.png（16×32，scale(3,3)=48×96px），IsWall=true
+//   → m_WorldPos 上移 TILE_SIZE/2 使 Sprite 底部對齊格子底部（同 NorthFaceTile 手法）
+// 開啟：ww002.png（16×16，48×48px），IsWall=false
+//   → m_WorldPos 還原為原始格子座標（無偏移）
+class DoorTile : public Tile {
+public:
+    explicit DoorTile(glm::vec2 worldPos);
+    void Open();
+    void Close();
+    bool IsOpen() const { return !m_IsWall; }
+private:
+    glm::vec2 m_BaseWorldPos;  // 原始格子座標（不含渲染偏移）
+};

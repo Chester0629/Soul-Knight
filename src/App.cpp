@@ -31,28 +31,34 @@ void App::Start() {
     m_Root.AddChild(m_Player);
     m_Player->AddWeaponSpriteToRenderer(m_Root);
 
-    // 測試哥布林（相對於 Spawn 房間中心偏移）
+    // Step 3.3：Spawn 房間無敵人，門初始開啟。
+    // Room[1]（第一個 Basic 房間）放測試哥布林，進房後門關閉，殺完才開。
     {
-        const glm::vec2 spawnCenter = m_World.GetSpawnPos();
+        const glm::vec2 room1Center = m_World.GetRoomOffset(1);
 
         auto pistol = std::make_shared<PistolGoblin>(&m_BulletManager);
-        pistol->SetWorldPos(spawnCenter + glm::vec2{200.0f,  100.0f});
+        pistol->SetWorldPos(room1Center + glm::vec2{ 150.0f,  80.0f});
 
-        auto spear = std::make_shared<SpearGoblin>(&m_BulletManager);
-        spear->SetWorldPos(spawnCenter + glm::vec2{-150.0f,  50.0f});
+        auto spear  = std::make_shared<SpearGoblin>(&m_BulletManager);
+        spear->SetWorldPos(room1Center + glm::vec2{-120.0f,  40.0f});
 
         auto archer = std::make_shared<ArcherGoblin>(&m_BulletManager);
-        archer->SetWorldPos(spawnCenter + glm::vec2{0.0f, -150.0f});
+        archer->SetWorldPos(room1Center + glm::vec2{  0.0f, -120.0f});
 
         m_EnemyManager.AddEnemy(pistol);
         m_EnemyManager.AddEnemy(spear);
         m_EnemyManager.AddEnemy(archer);
         m_EnemyManager.AddToRenderer(m_Root);
         m_EnemyManager.SetTarget(m_Player.get());
+
+        m_World.AssignEnemiesToRoom(1, {pistol.get(), spear.get(), archer.get()});
     }
 
     // HUD 最後加入（確保 Z 在最上層）
     m_HUD.AddToRenderer(m_Root);
+
+    // Step 3.3：初始門狀態（Spawn 無敵人 → 立刻開啟，Room[1] 有敵人 → 保持關閉）
+    m_World.Update(m_World.GetSpawnPos());
 
     m_CurrentState = State::UPDATE;
 }
@@ -65,6 +71,7 @@ void App::Update() {
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
     m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
+    m_World.Update(m_Player->GetWorldPos());   // Step 3.3：門狀態更新
     m_World.SyncTransforms(Camera::GetPosition());
 
     m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),
@@ -76,6 +83,11 @@ void App::Update() {
     if (m_Player->IsDead()) {
         m_CurrentState = State::END;
         return;
+    }
+
+    // Debug：F 鍵切換所有房間的門（Step 3.3 驗收用）
+    if (Util::Input::IsKeyDown(Util::Keycode::F)) {
+        m_World.DebugToggleDoors();
     }
 
     if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||

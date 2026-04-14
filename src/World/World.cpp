@@ -1,4 +1,5 @@
 #include "World/World.hpp"
+#include "Entity/Enemy.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -44,7 +45,7 @@ void World::Generate(unsigned seed, int floorIndex) {
         if (conn.dir == Direction::EAST || conn.dir == Direction::WEST) {
             // ── 水平走廊 ──────────────────────────────────────────────────
             isHorizontal = true;
-            corrRows     = RoomSpec::CORR_W;  // 8
+            corrRows     = RoomSpec::H_CORR_W;  // 10（WallCap+NorthFace+6Floor+SouthWallCap+SouthFace）
 
             // westRoom = 在左（西）的房間；eastRoom = 在右（東）的房間
             Room& westRoom = (conn.dir == Direction::EAST) ? roomA : roomB;
@@ -57,13 +58,14 @@ void World::Generate(unsigned seed, int floorIndex) {
 
             corrCols   = std::max(1, static_cast<int>(std::round(
                              (eastWestEdge - westEastEdge) / TILE_SIZE)));
+            // +TILE_SIZE/2：門洞中心 Y = worldOffset.y + 24（對任意奇數行數房間成立）
             corrCenter = {(westEastEdge + eastWestEdge) / 2.0f,
-                           westRoom.GetWorldOffset().y};
+                           westRoom.GetWorldOffset().y };
 
         } else {
             // ── 垂直走廊 ──────────────────────────────────────────────────
             isHorizontal = false;
-            corrCols     = RoomSpec::CORR_W;  // 8
+            corrCols     = RoomSpec::V_CORR_W;  // 8
 
             // northRoom = 在上方（高 Y）；southRoom = 在下方（低 Y）
             Room& northRoom = (conn.dir == Direction::SOUTH) ? roomA : roomB;
@@ -78,14 +80,24 @@ void World::Generate(unsigned seed, int floorIndex) {
 
             corrRows   = std::max(1, static_cast<int>(std::round(
                              (northSouthEdge - southNorthEdge) / TILE_SIZE)));
-            corrCenter = {northRoom.GetWorldOffset().x,
-                          (northSouthEdge + southNorthEdge) / 2.0f};
+            // +2：讓走廊 row 0 對齊 northRoom SouthWallCap，row last 對齊 southRoom 北邊界
+            corrRows  += 2;
+            // corrCenter.y = midpoint + TILE_SIZE：
+            //   可推導 row 0 Y = northRoom SouthWallCap Y（row m_Rows-2），
+            //   使走廊側牆頂端與 northRoom SouthFaceTile 視覺底部無縫銜接
+            corrCenter = {northRoom.GetWorldOffset().x - TILE_SIZE / 2.0f,
+                          (northSouthEdge + southNorthEdge) / 2.0f + TILE_SIZE};
         }
 
         m_Corridors.push_back(
             std::make_unique<Corridor>(corrCenter, corrCols, corrRows, isHorizontal)
         );
     }
+
+    // Step 3.3：Generate 結束後，所有 OpenDoor() 都已完成，
+    // 對無敵人的房間立刻開啟（在 AddToRenderer 之前，避免第一幀顯示關閉狀態）
+    for (auto& room : m_Rooms)
+        room->CheckAndOpenDoors();
 }
 
 // ── Renderer 整合 ─────────────────────────────────────────────────────────────
@@ -102,6 +114,49 @@ void World::SyncTransforms(glm::vec2 cameraPos) {
         room->SyncTransforms(cameraPos);
     for (auto& corr : m_Corridors)
         corr->SyncTransforms(cameraPos);
+}
+
+// ── Step 3.3：敵人指派 + 門狀態更新 ─────────────────────────────────────────
+void World::AssignEnemiesToRoom(int roomIdx, std::vector<Enemy*> enemies) {
+    if (roomIdx >= 0 && roomIdx < static_cast<int>(m_Rooms.size()))
+        m_Rooms[roomIdx]->AssignEnemies(std::move(enemies));
+}
+
+glm::vec2 World::GetRoomOffset(int roomIdx) const {
+    if (roomIdx >= 0 && roomIdx < static_cast<int>(m_Rooms.size()))
+        return m_Rooms[roomIdx]->GetWorldOffset();
+    return {0.0f, 0.0f};
+}
+
+// 判斷 worldPos 落在哪個房間 AABB 內（回傳索引，-1 表示走廊或越界）
+static int GetRoomIndexAt(const std::vector<std::unique_ptr<Room>>& rooms,
+                           glm::vec2 pos) {
+    for (int i = 0; i < static_cast<int>(rooms.size()); ++i) {
+        const auto& r   = *rooms[i];
+        glm::vec2   off = r.GetWorldOffset();
+        float       hx  = r.GetCols() * TILE_SIZE / 2.0f;
+        float       hy  = r.GetRows() * TILE_SIZE / 2.0f;
+        if (std::abs(pos.x - off.x) < hx && std::abs(pos.y - off.y) < hy)
+            return i;
+    }
+    return -1;
+}
+
+void World::Update(glm::vec2 playerPos) {
+    // 偵測房間切換
+    const int newRoomIdx = GetRoomIndexAt(m_Rooms, playerPos);
+    if (newRoomIdx != m_CurrentRoomIdx) {
+        m_CurrentRoomIdx = newRoomIdx;
+        // 玩家進入新房間：若有存活敵人 → 關門（開始戰鬥）
+        if (newRoomIdx >= 0) {
+            Room& room = *m_Rooms[newRoomIdx];
+            if (room.HasEnemies() && !room.IsCleared())
+                room.LockDoors();
+        }
+    }
+    // 每幀檢查：已開戰且敵人全清 → 開門
+    for (auto& room : m_Rooms)
+        room->CheckAndOpenDoors();
 }
 
 // ── 玩家出生位置（Spawn 房間中心）────────────────────────────────────────────
@@ -229,4 +284,15 @@ bool World::IsBlocked(glm::vec2 center, glm::vec2 size) const {
             return true;
 
     return false;
+}
+
+
+// ── DebugToggleDoors（F 鍵測試用）────────────────────────────────────────────
+void World::DebugToggleDoors() {
+    for (auto& room : m_Rooms) {
+        if (room->AreDoorsOpen())
+            room->DebugCloseDoors();
+        else
+            room->OpenAllDoors();
+    }
 }

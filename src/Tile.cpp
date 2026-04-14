@@ -25,22 +25,54 @@ WallTile::WallTile(glm::vec2 worldPos) : Tile(worldPos) {
 }
 
 // ── NorthFaceTile（北牆面，固定 Z）────────────────────────────────────────────
-// 使用 w004.png：北牆內側可見面（Row 1），玩家看到的是牆的正面。
-// SouthFaceTile 同樣使用 w004（南牆立體深度效果）。
+// w004 現為 16×8px（scale(3,3)=48×24px）。
+// 偏移 +3*TILE_SIZE/4（36px），使 Sprite 底部落在 WallTile cap 底部附近。
 NorthFaceTile::NorthFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
     m_IsWall = true;
+    m_WorldPos.y += TILE_SIZE * 0.75f;  // 36px，對齊新 w004 尺寸
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/w004.png"));
-    SetZIndex(0.3f);  // 低於 WallTile(0.5)，讓 row 0 cap 蓋住 NorthFace 的重疊區
+    SetZIndex(0.3f);
     SetVisible(true);
 }
 
 // ── SouthFaceTile（南牆面，Y-Sort Z）─────────────────────────────────────────
-// 玩家走近南牆時，南牆面應遮擋玩家 → Y-Sort
+// 同 NorthFaceTile，偏移 +3*TILE_SIZE/4 對齊新 w004 尺寸。
 SouthFaceTile::SouthFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
     m_IsWall = true;
+    m_WorldPos.y += TILE_SIZE * 0.75f;  // 36px
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/w004.png"));
-    UpdateZIndex();  // 設定初始 Z
+    UpdateZIndex();
     SetVisible(true);
+}
+
+// ── DoorTile（門，可切換開關）────────────────────────────────────────────────
+// ww001：16×32 → scale(3,3) = 48×96px（比一格高）
+//   關閉時 m_WorldPos 上移 TILE_SIZE/2（24px），使 Sprite 底部 = 格子底部
+// ww002：16×16 → scale(3,3) = 48×48px（正常格子大小）
+//   開啟時還原 m_WorldPos 至原始格子座標
+DoorTile::DoorTile(glm::vec2 worldPos)
+    : Tile(worldPos), m_BaseWorldPos(worldPos)
+{
+    m_IsWall = true;
+    m_WorldPos.y += TILE_SIZE / 2.0f;  // 上移 24px，Sprite 底部對齊格子底部
+    SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww001.png"));
+    SetZIndex(0.5f);
+    SetVisible(true);
+}
+
+void DoorTile::Open() {
+    m_IsWall = false;
+    m_WorldPos = m_BaseWorldPos;        // 還原，ww002 正常置中
+    SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww002.png"));
+    SetZIndex(0.0f);
+}
+
+void DoorTile::Close() {
+    m_IsWall = true;
+    m_WorldPos = m_BaseWorldPos;
+    m_WorldPos.y += TILE_SIZE / 2.0f;  // 還原偏移
+    SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww001.png"));
+    SetZIndex(0.5f);
 }
 
 void SouthFaceTile::UpdateZIndex() {
