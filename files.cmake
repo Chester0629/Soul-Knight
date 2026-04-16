@@ -17,6 +17,7 @@ set(SRC_FILES
     Weapon/BulletManager.cpp
     Weapon/Weapon.cpp
     UI/HUD.cpp
+    UI/MiniMap.cpp
 )
 
 set(INCLUDE_FILES
@@ -36,6 +37,7 @@ set(INCLUDE_FILES
     Weapon/BulletManager.hpp
     Weapon/Weapon.hpp
     UI/HUD.hpp
+    UI/MiniMap.hpp
 )
 
 set(TEST_FILES

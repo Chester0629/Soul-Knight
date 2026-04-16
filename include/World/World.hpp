@@ -42,6 +42,12 @@ public:
     // Debug：切換所有房間的門（測試用，Step 3.3 驗收按鍵）
     void DebugToggleDoors();
 
+    // Step 3.4 迷你地圖
+    int            GetCurrentRoomIdx()  const { return m_CurrentRoomIdx; }
+    int            GetRoomCount()       const { return static_cast<int>(m_Rooms.size()); }
+    glm::ivec2     GetRoomGridPos(int i) const { return m_Rooms[i]->GetGridPos(); }
+    bool           IsRoomVisited(int i)  const { return m_Rooms[i]->IsVisited(); }
+
     // 5×5 網格的世界間距（= 36 tiles × 48px）
     static constexpr float GRID_SPACING_X = 1728.0f;
     static constexpr float GRID_SPACING_Y = 1296.0f;

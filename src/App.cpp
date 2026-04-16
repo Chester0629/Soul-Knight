@@ -54,8 +54,18 @@ void App::Start() {
         m_World.AssignEnemiesToRoom(1, {pistol.get(), spear.get(), archer.get()});
     }
 
-    // HUD 最後加入（確保 Z 在最上層）
+    // HUD + MiniMap 最後加入（確保 Z 在最上層）
     m_HUD.AddToRenderer(m_Root);
+
+    // Step 3.4：迷你地圖
+    {
+        std::vector<glm::ivec2> gridPos;
+        gridPos.reserve(m_World.GetRoomCount());
+        for (int i = 0; i < m_World.GetRoomCount(); ++i)
+            gridPos.push_back(m_World.GetRoomGridPos(i));
+        m_MiniMap.Init(m_World.GetRoomCount(), gridPos);
+        m_MiniMap.AddToRenderer(m_Root);
+    }
 
     // Step 3.3：初始門狀態（Spawn 無敵人 → 立刻開啟，Room[1] 有敵人 → 保持關閉）
     m_World.Update(m_World.GetSpawnPos());
@@ -77,6 +87,14 @@ void App::Update() {
     m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),
                  m_Player->GetShield(), m_Player->GetMaxShield(),
                  m_Player->GetEnergy(), m_Player->GetMaxEnergy());
+
+    {
+        std::vector<bool> visited;
+        visited.reserve(m_World.GetRoomCount());
+        for (int i = 0; i < m_World.GetRoomCount(); ++i)
+            visited.push_back(m_World.IsRoomVisited(i));
+        m_MiniMap.Update(m_World.GetCurrentRoomIdx(), visited);
+    }
 
     m_Root.Update();
 

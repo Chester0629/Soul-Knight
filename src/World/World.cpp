@@ -150,6 +150,7 @@ void World::Update(glm::vec2 playerPos) {
         // 玩家進入新房間：若有存活敵人 → 關門（開始戰鬥）
         if (newRoomIdx >= 0) {
             Room& room = *m_Rooms[newRoomIdx];
+            room.SetVisited();
             if (room.HasEnemies() && !room.IsCleared())
                 room.LockDoors();
         }

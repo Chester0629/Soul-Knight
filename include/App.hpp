@@ -5,6 +5,7 @@
 #include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
 #include "UI/HUD.hpp"
+#include "UI/MiniMap.hpp"
 #include "Util/Renderer.hpp"
 #include "Weapon/BulletManager.hpp"
 #include "World/World.hpp"
@@ -34,4 +35,5 @@ private:
     std::shared_ptr<Player>  m_Player;
     EnemyManager             m_EnemyManager;
     HUD                      m_HUD;
+    MiniMap                  m_MiniMap;
 };

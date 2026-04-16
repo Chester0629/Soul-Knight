@@ -73,6 +73,9 @@ public:
     bool AreDoorsOpen() const { return m_DoorsOpened; } // 查詢門目前是否開啟
     void DebugCloseDoors();                              // 強制關閉（Debug 用，繞過清場守衛）
 
+    void SetVisited()    { m_Visited = true; }
+    bool IsVisited() const { return m_Visited; }
+
 
     bool IsWallAt(int row, int col) const;
     int GetCols()  const { return m_Cols; }
@@ -104,7 +107,8 @@ private:
     // Step 3.3
     std::vector<std::shared_ptr<DoorTile>> m_Doors;
     std::vector<Enemy*>                    m_Enemies;         // 非擁有
-    bool                                   m_DoorsOpened  = false; // 永久開啟（已清場）
-    bool                                   m_CombatStarted = false; // 已進房觸發戰鬥
+    bool                                   m_DoorsOpened  = false;
+    bool                                   m_CombatStarted = false;
+    bool                                   m_Visited       = false;
 
 };
