@@ -72,6 +72,7 @@ private:
     std::vector<RoomType>                  m_RoomTypes;      // 與 m_Rooms 平行
     std::vector<std::unique_ptr<Corridor>> m_Corridors;
     int                                    m_CurrentRoomIdx = -1;
+    int                                    m_InnerRoomIdx   = -1;  // 縮小 AABB 用於關門觸發
     std::function<void(int)>               m_OnEnterEnemyRoom;
 
     // (gridRow, gridCol) → 世界中心座標

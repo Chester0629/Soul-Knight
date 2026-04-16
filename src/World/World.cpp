@@ -130,14 +130,15 @@ glm::vec2 World::GetRoomOffset(int roomIdx) const {
     return {0.0f, 0.0f};
 }
 
-// 判斷 worldPos 落在哪個房間 AABB 內（回傳索引，-1 表示走廊或越界）
+// 判斷 worldPos 落在哪個房間內（回傳索引，-1 表示走廊或越界）
+// margin > 0 時向內縮（用於「確實進入房間」的觸發，避免在門口就誤觸）
 static int GetRoomIndexAt(const std::vector<std::unique_ptr<Room>>& rooms,
-                           glm::vec2 pos) {
+                           glm::vec2 pos, float margin = 0.0f) {
     for (int i = 0; i < static_cast<int>(rooms.size()); ++i) {
         const auto& r   = *rooms[i];
         glm::vec2   off = r.GetWorldOffset();
-        float       hx  = r.GetCols() * TILE_SIZE / 2.0f;
-        float       hy  = r.GetRows() * TILE_SIZE / 2.0f;
+        float       hx  = r.GetCols() * TILE_SIZE / 2.0f - margin;
+        float       hy  = r.GetRows() * TILE_SIZE / 2.0f - margin;
         if (std::abs(pos.x - off.x) < hx && std::abs(pos.y - off.y) < hy)
             return i;
     }
@@ -145,22 +146,27 @@ static int GetRoomIndexAt(const std::vector<std::unique_ptr<Room>>& rooms,
 }
 
 void World::Update(glm::vec2 playerPos) {
-    // 偵測房間切換
+    // 標準 AABB：用於迷你地圖 / SetVisited
     const int newRoomIdx = GetRoomIndexAt(m_Rooms, playerPos);
     if (newRoomIdx != m_CurrentRoomIdx) {
         m_CurrentRoomIdx = newRoomIdx;
-        if (newRoomIdx >= 0) {
-            Room& room = *m_Rooms[newRoomIdx];
-            room.SetVisited();
-            if (room.IsEnemyRoom()) {
-                // 首次進入：委託 App 生成敵人（IsCleared() 在未生成時為 true，需先判斷 spawned）
-                if (!room.AreEnemiesSpawned() && m_OnEnterEnemyRoom)
-                    m_OnEnterEnemyRoom(newRoomIdx);
-                // 有存活敵人 → 關門（清場後 re-entry 則不關）
-                if (!room.IsCleared())
-                    room.LockDoors();
-            }
+        if (newRoomIdx >= 0)
+            m_Rooms[newRoomIdx]->SetVisited();
+    }
+
+    // 縮小 AABB（向內 2 格）：確保玩家已穿過門口才觸發敵人生成與關門
+    const int innerIdx = GetRoomIndexAt(m_Rooms, playerPos, TILE_SIZE * 2.0f);
+    if (innerIdx >= 0 && innerIdx != m_InnerRoomIdx) {
+        m_InnerRoomIdx = innerIdx;
+        Room& room = *m_Rooms[innerIdx];
+        if (room.IsEnemyRoom()) {
+            if (!room.AreEnemiesSpawned() && m_OnEnterEnemyRoom)
+                m_OnEnterEnemyRoom(innerIdx);
+            if (!room.IsCleared())
+                room.LockDoors();
         }
+    } else if (innerIdx < 0) {
+        m_InnerRoomIdx = -1;
     }
 
     // 每幀檢查：已開戰且敵人全清 → 開門
