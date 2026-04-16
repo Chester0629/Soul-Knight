@@ -152,12 +152,13 @@ void World::Update(glm::vec2 playerPos) {
         if (newRoomIdx >= 0) {
             Room& room = *m_Rooms[newRoomIdx];
             room.SetVisited();
-            if (room.IsEnemyRoom() && !room.IsCleared()) {
-                // 首次進入：委託 App 生成敵人（callback 內完成 AssignEnemies）
+            if (room.IsEnemyRoom()) {
+                // 首次進入：委託 App 生成敵人（IsCleared() 在未生成時為 true，需先判斷 spawned）
                 if (!room.AreEnemiesSpawned() && m_OnEnterEnemyRoom)
                     m_OnEnterEnemyRoom(newRoomIdx);
-                // 生成後（或再次進入未清場）→ 關門
-                room.LockDoors();
+                // 有存活敵人 → 關門（清場後 re-entry 則不關）
+                if (!room.IsCleared())
+                    room.LockDoors();
             }
         }
     }
