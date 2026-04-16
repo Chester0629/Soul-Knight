@@ -1,21 +1,26 @@
 #pragma once
 
+#include "Util/Color.hpp"
 #include "Util/GameObject.hpp"
 #include "Util/Image.hpp"
 #include "Util/Renderer.hpp"
+#include "Util/Text.hpp"
 #include "pch.hpp"
 
 #include <memory>
+#include <string>
 
-// HUD — 三條橫條全部放在 ui_15 面板內
+// HUD — 左上角能力面板
 //
-// 版面（Y 向上為正）：
-//   ui_15 面板中心 = (HP_CX, HP_CY)
-//   護盾填充 Y = HP_CY + 10
-//   血量填充 Y = HP_CY
-//   能量填充 Y = HP_CY - 10
+// 背景：ui_15.png（79×39）
+//   - col 6-12：圓形 icon（紅/灰/藍），3 排對應 HP / 護盾 / 能量
+//   - col 15-76：bar 空槽（62px natural），縮放至 BAR_W=340px
+//   - row 8 / 18 / 28：三排 bar 中心（natural coords）
 //
-// 所有填充左邊緣對齊 BAR_LEFT_X（面板橫條區起點），寬度 = BAR_W
+// Fill bar 素材：
+//   ui_h.png (12×48) 紅色 HP
+//   ui_s.png (12×47) 灰色護盾
+//   ui_e.png  (6×48) 藍色能量
 class HUD {
 public:
     HUD();
@@ -24,56 +29,71 @@ public:
     void Update(int hp, int maxHP, int shield, int maxShield,
                 int energy, int maxEnergy);
 
-    static constexpr float Z_INDEX = 99.5f;
+    static constexpr float Z_PANEL = 99.50f;
     static constexpr float Z_FILL  = 99.51f;
+    static constexpr float Z_TEXT  = 99.52f;
 
 private:
-    // ─── ui_15.png（79×39）scale {3,3} ──────────────────────────────────────
-    static constexpr float HP_SCALE  = 4.0f;
-    static constexpr float HP_W_NAT  = 79.0f;
-    static constexpr float HP_H_NAT  = 39.0f;
-    static constexpr float HP_W      = HP_W_NAT * HP_SCALE;   // 237
-    static constexpr float HP_H      = HP_H_NAT * HP_SCALE;   // 117
+    // ── ui_15.png 自然尺寸 ───────────────────────────────────────────────
+    static constexpr float UI15_W_NAT   = 79.0f;
+    static constexpr float UI15_H_NAT   = 39.0f;
+    static constexpr float UI15_BAR_COL = 16.0f;   // bar 從第 15 列開始
+    static constexpr float BAR_NAT_W    = 58.0f;   // bar 自然寬度
+    static constexpr float BAR_NAT_H    =  8.5f;   // bar 自然高度（每排 slot）
 
-    // 左上角距螢幕邊界 6px
-    static constexpr float LEFT_EDGE = -640.0f + 6.0f;        // -634
-    static constexpr float TOP_EDGE  =  360.0f - 6.0f;        //  354
+    // ── 使用者指定 bar 渲染寬度，推導唯一縮放比例（等比） ───────────────
+    static constexpr float BAR_W        = 174.0f;
+    static constexpr float SCALE        = BAR_W / BAR_NAT_W;  // ≈5.690
 
-    // 面板中心
-    static constexpr float HP_CX = LEFT_EDGE + HP_W * 0.5f;   // -515.5
-    static constexpr float HP_CY = TOP_EDGE  - HP_H * 0.5f;   //  295.5
+    // ── ui_15 等比縮放後的面板尺寸 ──────────────────────────────────────
+    static constexpr float PANEL_W      = UI15_W_NAT * SCALE;  // ≈449
+    static constexpr float PANEL_H      = UI15_H_NAT * SCALE;  // ≈222
 
-    // 圓形 icon 佔左側 ~49%（≈ 39px 方形）
-    static constexpr float ICON_FRAC  = 0.494f;
-    static constexpr float BAR_LEFT_X = LEFT_EDGE + HP_W * ICON_FRAC; // ≈-517
-    static constexpr float BAR_W      = HP_W * (1.0f - ICON_FRAC);    // ≈120
+    // ── 螢幕錨點 ─────────────────────────────────────────────────────────
+    static constexpr float LEFT = -640.0f + 6.0f;   // -634
+    static constexpr float TOP  =  360.0f - 6.0f;   //  354
 
-    // 三條 bar 的 Y 偏移（在面板內）
-    static constexpr float Y_HP     = HP_CY + 45.0f;
-    static constexpr float Y_SHIELD = HP_CY + 5.0f;
-    static constexpr float Y_ENERGY = HP_CY - 35.0f;
+    static constexpr float PANEL_CX = LEFT + PANEL_W * 0.5f;
+    static constexpr float PANEL_CY = TOP  - PANEL_H * 0.5f;
 
-    // 每條 bar 渲染高度目標 ≈ 10px，各圖原始高度不同
-    // hp_fill.png (64×16)、shield_fill.png (64×16)、ui_27.png (58×32)
-    static constexpr float HP_FILL_W_NAT = 64.0f;
-    static constexpr float HP_FILL_H_NAT = 16.0f;
-    static constexpr float SH_FILL_W_NAT = 64.0f;
-    static constexpr float SH_FILL_H_NAT = 16.0f;
-    static constexpr float EN_FILL_W_NAT = 58.0f;
-    static constexpr float EN_FILL_H_NAT = 32.0f;
+    // ── Bar 左邊緣 & 三排 Y 中心（依 SCALE 推導） ───────────────────────
+    static constexpr float BAR_LEFT = LEFT + UI15_BAR_COL * SCALE;
 
-    static constexpr float TARGET_BAR_H  = 25.0f;        // 目標渲染高度（10 × 2.5）
-    static constexpr float FILL_BAR_W   = BAR_W * 1.45f; // 填充寬度統一（BAR_W × 3.5）
-    static constexpr float FILL_X_OFFSET = -90.0f;      // 填充往左偏移 100px
+    static constexpr float HP_Y = TOP -  8.0f * SCALE;   // row 8
+    static constexpr float SH_Y = TOP - 18.0f * SCALE;   // row 18
+    static constexpr float EN_Y = TOP - 28.0f * SCALE;   // row 28
 
-    // ─── GameObjects ─────────────────────────────────────────────────────────
-    std::shared_ptr<Util::GameObject> m_HpPanel;
+    // ── Fill bar 渲染高度 = bar 自然高度 × SCALE ─────────────────────────
+    static constexpr float BAR_FILL_H = BAR_NAT_H * SCALE;   // ≈51
+
+    // ── Fill bar 素材自然尺寸 ─────────────────────────────────────────────
+    static constexpr float UH_W = 12.0f, UH_H = 47.0f;   // ui_h.png
+    static constexpr float US_W = 12.0f, US_H = 47.0f;   // ui_s.png
+    static constexpr float UE_W = 12.0f, UE_H = 47.0f;   // ui_e.png
+
+    // ── GameObjects ──────────────────────────────────────────────────────
+    std::shared_ptr<Util::GameObject> m_Panel;
 
     std::shared_ptr<Util::GameObject> m_HpFill;
     std::shared_ptr<Util::GameObject> m_ShieldFill;
     std::shared_ptr<Util::GameObject> m_EnergyFill;
 
-    // 左對齊填充：從 BAR_LEFT_X 開始，依 ratio 向右延伸
-    static void UpdateFill(Util::GameObject* fill,
-                           float barW, float fillWNat, float ratio);
+    std::shared_ptr<Util::Text>       m_HpText;
+    std::shared_ptr<Util::GameObject> m_HpTextObj;
+    std::shared_ptr<Util::Text>       m_ShieldText;
+    std::shared_ptr<Util::GameObject> m_ShieldTextObj;
+    std::shared_ptr<Util::Text>       m_EnergyText;
+    std::shared_ptr<Util::GameObject> m_EnergyTextObj;
+
+    // ── 輔助 ─────────────────────────────────────────────────────────────
+    static std::shared_ptr<Util::GameObject> MakeImage(
+        const std::string& path, float sx, float sy,
+        float cx, float cy, float z);
+
+    static std::shared_ptr<Util::GameObject> MakeTextObj(
+        const std::shared_ptr<Util::Text>& text,
+        float cx, float cy, float z);
+
+    static void UpdateFill(Util::GameObject* fill, float ratio,
+                           float fillWNat);
 };

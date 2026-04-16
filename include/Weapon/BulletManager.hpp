@@ -36,7 +36,7 @@ public:
     const std::vector<std::shared_ptr<Bullet>>& GetBullets() const { return m_Bullets; }
 
     static constexpr int   MAX_BULLETS  = 100;
-    static constexpr float OUT_OF_RANGE = 2000.0f;  // 超出此距離視為越界
+    static constexpr float OUT_OF_RANGE = 6000.0f;  // 5×5 網格最遠房間距原點 ≈4320px，6000 含子彈飛行餘量
 
 private:
     std::vector<std::shared_ptr<Bullet>> m_Bullets;
