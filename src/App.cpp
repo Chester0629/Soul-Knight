@@ -10,6 +10,7 @@
 
 #include <cstdlib>
 #include <ctime>
+#include <random>
 
 void App::Start() {
     LOG_TRACE("Start");
@@ -31,27 +32,48 @@ void App::Start() {
     m_Root.AddChild(m_Player);
     m_Player->AddWeaponSpriteToRenderer(m_Root);
 
-    // Step 3.3：Spawn 房間無敵人，門初始開啟。
-    // Room[1]（第一個 Basic 房間）放測試哥布林，進房後門關閉，殺完才開。
+    // 所有 BASIC 房間自動生成敵人
     {
-        const glm::vec2 room1Center = m_World.GetRoomOffset(1);
+        std::mt19937 rng(seed ^ 0xCAFEBABEu);
 
-        auto pistol = std::make_shared<PistolGoblin>(&m_BulletManager);
-        pistol->SetWorldPos(room1Center + glm::vec2{ 150.0f,  80.0f});
+        for (int i = 0; i < m_World.GetRoomCount(); ++i) {
+            if (m_World.GetRoomType(i) != RoomType::BASIC) continue;
 
-        auto spear  = std::make_shared<SpearGoblin>(&m_BulletManager);
-        spear->SetWorldPos(room1Center + glm::vec2{-120.0f,  40.0f});
+            const glm::vec2 center = m_World.GetRoomOffset(i);
+            const int cols = m_World.GetRoomCols(i);
+            const int rows = m_World.GetRoomRows(i);
 
-        auto archer = std::make_shared<ArcherGoblin>(&m_BulletManager);
-        archer->SetWorldPos(room1Center + glm::vec2{  0.0f, -120.0f});
+            // 安全生成區域：距牆壁 3 格
+            const float hw = (cols * 0.5f - 3.0f) * TILE_SIZE;
+            const float hh = (rows * 0.5f - 4.0f) * TILE_SIZE;
+            std::uniform_real_distribution<float> dx(-hw, hw);
+            std::uniform_real_distribution<float> dy(-hh, hh);
 
-        m_EnemyManager.AddEnemy(pistol);
-        m_EnemyManager.AddEnemy(spear);
-        m_EnemyManager.AddEnemy(archer);
+            // 敵人數量依房間大小
+            const int area = cols * rows;
+            int count;
+            if      (area < 300) count = 3 + static_cast<int>(rng() % 3);   // 3-5
+            else if (area < 450) count = 4 + static_cast<int>(rng() % 4);   // 4-7
+            else                 count = 6 + static_cast<int>(rng() % 4);   // 6-9
+
+            std::vector<Enemy*> ptrs;
+            ptrs.reserve(static_cast<size_t>(count));
+            for (int k = 0; k < count; ++k) {
+                std::shared_ptr<Enemy> e;
+                switch (rng() % 3) {
+                    case 0:  e = std::make_shared<PistolGoblin>(&m_BulletManager); break;
+                    case 1:  e = std::make_shared<SpearGoblin> (&m_BulletManager); break;
+                    default: e = std::make_shared<ArcherGoblin>(&m_BulletManager); break;
+                }
+                e->SetWorldPos({center.x + dx(rng), center.y + dy(rng)});
+                ptrs.push_back(e.get());
+                m_EnemyManager.AddEnemy(e);
+            }
+            m_World.AssignEnemiesToRoom(i, std::move(ptrs));
+        }
+
         m_EnemyManager.AddToRenderer(m_Root);
         m_EnemyManager.SetTarget(m_Player.get());
-
-        m_World.AssignEnemiesToRoom(1, {pistol.get(), spear.get(), archer.get()});
     }
 
     // HUD + MiniMap 最後加入（確保 Z 在最上層）

@@ -300,9 +300,10 @@ void Room::DebugCloseDoors() {
 }
 
 void Room::CheckAndOpenDoors() {
-    if (m_DoorsOpened)   return;
-    if (!m_CombatStarted) return;
-    if (IsCleared()) OpenAllDoors();
+    if (m_DoorsOpened) return;
+    if (!HasEnemies()) { OpenAllDoors(); return; }  // 無敵人 → 立刻開啟
+    if (!m_CombatStarted) return;                   // 有敵人但尚未進房
+    if (IsCleared()) OpenAllDoors();                // 有敵人且全清場
 }
 
 // ── 碰撞查詢 ──────────────────────────────────────────────────────────────────

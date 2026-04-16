@@ -48,12 +48,18 @@ public:
     glm::ivec2     GetRoomGridPos(int i) const { return m_Rooms[i]->GetGridPos(); }
     bool           IsRoomVisited(int i)  const { return m_Rooms[i]->IsVisited(); }
 
+    // 敵人生成輔助
+    RoomType   GetRoomType(int i) const { return m_RoomTypes[i]; }
+    int        GetRoomCols(int i) const { return m_Rooms[i]->GetCols(); }
+    int        GetRoomRows(int i) const { return m_Rooms[i]->GetRows(); }
+
     // 5×5 網格的世界間距（= 36 tiles × 48px）
     static constexpr float GRID_SPACING_X = 1728.0f;
     static constexpr float GRID_SPACING_Y = 1296.0f;
 
 private:
     std::vector<std::unique_ptr<Room>>     m_Rooms;
+    std::vector<RoomType>                  m_RoomTypes;      // 與 m_Rooms 平行
     std::vector<std::unique_ptr<Corridor>> m_Corridors;
     int                                    m_CurrentRoomIdx = -1;
 

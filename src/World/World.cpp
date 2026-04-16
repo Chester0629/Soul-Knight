@@ -16,6 +16,7 @@ glm::vec2 World::GridToWorld(glm::ivec2 gridPos) {
 // ── Generate ──────────────────────────────────────────────────────────────────
 void World::Generate(unsigned seed, int floorIndex) {
     m_Rooms.clear();
+    m_RoomTypes.clear();
     m_Corridors.clear();
 
     const DungeonLayout layout = DungeonGenerator::Generate(seed, floorIndex);
@@ -26,6 +27,7 @@ void World::Generate(unsigned seed, int floorIndex) {
         m_Rooms.push_back(
             std::make_unique<Room>(node.tmpl, node.gridPos, offset)
         );
+        m_RoomTypes.push_back(node.type);
     }
 
     // 2. 開門 + 建立走廊
@@ -94,10 +96,8 @@ void World::Generate(unsigned seed, int floorIndex) {
         );
     }
 
-    // Step 3.3：Generate 結束後，所有 OpenDoor() 都已完成，
-    // 對無敵人的房間立刻開啟（在 AddToRenderer 之前，避免第一幀顯示關閉狀態）
-    for (auto& room : m_Rooms)
-        room->CheckAndOpenDoors();
+    // 門的初始狀態由 App::Start() 完成 AssignEnemiesToRoom 後呼叫
+    // World::Update(spawnPos) 觸發，此時才能正確區分有/無敵人房間
 }
 
 // ── Renderer 整合 ─────────────────────────────────────────────────────────────
