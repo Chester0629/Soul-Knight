@@ -28,16 +28,15 @@ public:
     // 正確順序：UpdatePhysics → Camera::Update → SyncRender
     void SyncRender(glm::vec2 cameraPos) {
         m_Transform.translation = m_WorldPos - cameraPos;
-        SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f));
+        SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 64.0f, 2.0f, 98.0f));
     }
 
 protected:
-    // ⚠️ 供子類在 Constructor 初始化時使用
     void SyncRenderTransform(glm::vec2 cameraPos) {
         m_Transform.translation = m_WorldPos - cameraPos;
     }
     void UpdateZIndex() {
-        SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f));
+        SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 64.0f, 2.0f, 98.0f));
     }
 
     glm::vec2 m_WorldPos = {0.0f, 0.0f};

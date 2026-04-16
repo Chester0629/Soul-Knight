@@ -98,7 +98,8 @@ private:
 
     std::vector<std::vector<std::shared_ptr<Tile>>> m_TileMap;
     std::vector<std::shared_ptr<SouthFaceTile>>     m_SouthFaces;
-    std::vector<std::shared_ptr<Tile>>               m_BackfillTiles;
+    std::vector<std::shared_ptr<SideWallFaceTile>> m_SideFaces;  // 東西牆面（Y-Sort，視覺用）
+    std::vector<std::shared_ptr<Tile>>              m_BottomFill; // 補底地板（最後一排原始位置）
 
     // Step 3.3
     std::vector<std::shared_ptr<DoorTile>> m_Doors;

@@ -111,7 +111,7 @@ void Player::UpdateWeaponSpriteTransform() {
     m_WeaponSprite->m_Transform.translation = weaponWorldPos - Camera::GetPosition();
 
     // 使用與 SyncRender 相同公式直接算當前 Z，不依賴上一幀的 GetZIndex()
-    const float playerZ = glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f);
+    const float playerZ = glm::clamp(50.0f - m_WorldPos.y / 64.0f, 2.0f, 98.0f);
     m_WeaponSprite->SetZIndex(playerZ + 0.1f);
 }
 

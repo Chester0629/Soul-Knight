@@ -59,6 +59,15 @@ public:
     void UpdateZIndex();
 };
 
+// ── 東西牆面 Tile（東西門開口處的牆面，固定 Z）──────────────────────────────
+// 位置：東西門 DoorTile 同一格，作為視覺覆蓋層
+// 素材：w004.png，Z = 0.5f（固定，同 WallTile；門的 Y-Sort Z 主導渲染順序）
+// 僅視覺用：m_IsWall = false，不影響碰撞
+class SideWallFaceTile : public Tile {
+public:
+    explicit SideWallFaceTile(glm::vec2 worldPos);
+};
+
 // ── 門 Tile（走廊銜接處，可開關）────────────────────────────────────────────
 // 關閉：ww001.png（16×32，scale(3,3)=48×96px），IsWall=true
 //   → m_WorldPos 上移 TILE_SIZE/2 使 Sprite 底部對齊格子底部（同 NorthFaceTile 手法）
@@ -71,5 +80,6 @@ public:
     void Close();
     bool IsOpen() const { return !m_IsWall; }
 private:
-    glm::vec2 m_BaseWorldPos;  // 原始格子座標（不含渲染偏移）
+    glm::vec2 m_BaseWorldPos;
+    float     m_BaseZ;  // Open/Close 共用的 Y-Sort Z
 };

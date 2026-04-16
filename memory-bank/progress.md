@@ -7,7 +7,7 @@
 ## 當前狀態
 
 - **目前里程碑**: M3 進行中
-- **下一步**: **M3 Step 3.3 門的生成邏輯**
+- **下一步**: **M3 Step 3.4 迷你地圖**
 
 ---
 
@@ -50,7 +50,7 @@
 |------|------|------|
 | 3.1 多種房間模板 | ✅ 完成 | 5種模板(SPAWN/SMALL/MEDIUM/LARGE/WIDE)，RoomTemplate enum，m_GridPos/m_WorldOffset，啟動隨機選擇 |
 | 3.2 地城生成演算法 | ✅ 完成 | DungeonGenerator(5×5網格/隨機seed)、Corridor(水平/垂直)、World(多房間碰撞)；CollisionSystem改為World多房間版 |
-| 3.3 門的生成邏輯 | ⬜ 待做 | 敵人全清才開門，走廊觸發 Spawn |
+| 3.3 門的生成邏輯 | ✅ 完成 | DoorTile(開/關)、OpenDoor改用DoorTile、SideWallFaceTile(東西牆面w004)、Room.IsCleared/CheckAndOpenDoors、World.AssignEnemiesToRoom/Update；Y-Sort 公式統一改為 /64.0f（全地城無 clamp 問題） |
 | 3.4 迷你地圖 | ⬜ 待做 | 右中上角，已探索才顯示 |
 
 ---
@@ -78,6 +78,15 @@
 ---
 
 ## 開發日誌
+
+### 2026-04-17
+- ✅ Step 3.3 驗收通過（Z-Sort 最終修正）
+  - 加入 `SideWallFaceTile`（東西門開口處 w004 牆面，固定 Z=0.5f）
+  - `DoorTile` 開關皆使用 Y-Sort Z（m_BaseZ），解決 ww002 被 f101 覆蓋問題
+  - Y-Sort 公式全面改為 `/64.0f`（原 `/6.0f`）
+    - 5×5 地城 max |worldY| ≈ 3048，`50 ± 3048/64 ≈ 50 ± 47.6`，安全落在 [2,98]
+    - 消除所有 clamp 問題，全地城門/牆/玩家 Z-Sort 一致
+  - 移除臨時 SetBaseZ / SetZOffset / GetCurrentRoomOffset 補丁，恢復單一座標系
 
 ### 2026-04-10
 - ✅ Step 3.2 實作完成，編譯通過（零 warning）

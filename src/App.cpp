@@ -68,10 +68,10 @@ void App::Update() {
 
     m_Player->Update(dt);
     Camera::Update(m_Player->GetWorldPos());
+    m_World.Update(m_Player->GetWorldPos());   // 必須在 SyncRender 前，確保 ZOffset 正確
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
     m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
-    m_World.Update(m_Player->GetWorldPos());   // Step 3.3：門狀態更新
     m_World.SyncTransforms(Camera::GetPosition());
 
     m_HUD.Update(m_Player->GetHP(),     m_Player->GetMaxHP(),

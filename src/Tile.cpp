@@ -25,11 +25,12 @@ WallTile::WallTile(glm::vec2 worldPos) : Tile(worldPos) {
 }
 
 // ── NorthFaceTile（北牆面，固定 Z）────────────────────────────────────────────
-// w004 現為 16×8px（scale(3,3)=48×24px）。
-// 偏移 +3*TILE_SIZE/4（36px），使 Sprite 底部落在 WallTile cap 底部附近。
+// w004 為 16×8px → scale(3,3) = 48×24px（格子高度的一半）。
+// 中心往上移 TILE_SIZE/4（12px），使 Sprite 佔據格子上半部 [worldY, worldY+24]。
+// 底部（worldY）恰好對齊 row2 地板上移後的頂部，視覺上無縫連接。
 NorthFaceTile::NorthFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
     m_IsWall = true;
-    m_WorldPos.y += TILE_SIZE * 0.75f;  // 36px，對齊新 w004 尺寸
+    m_WorldPos.y += TILE_SIZE * 0.25f;  // +12px，sprite 佔格子上半部
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/w004.png"));
     SetZIndex(0.3f);
     SetVisible(true);
@@ -39,9 +40,18 @@ NorthFaceTile::NorthFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
 // 同 NorthFaceTile，偏移 +3*TILE_SIZE/4 對齊新 w004 尺寸。
 SouthFaceTile::SouthFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
     m_IsWall = true;
-    m_WorldPos.y += TILE_SIZE * 0.75f;  // 36px
+    m_WorldPos.y += TILE_SIZE * 0.25f;  // 36px
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/w004.png"));
     UpdateZIndex();
+    SetVisible(true);
+}
+
+// ── SideWallFaceTile（東西側牆面，固定 Z）────────────────────────────────────
+SideWallFaceTile::SideWallFaceTile(glm::vec2 worldPos) : Tile(worldPos) {
+    m_IsWall = false;
+    m_WorldPos.y += TILE_SIZE * 0.25f;
+    SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/w004.png"));
+    SetZIndex(0.5f);  // 固定同 WallTile；門的 Y-Sort 主導渲染層
     SetVisible(true);
 }
 
@@ -54,25 +64,25 @@ DoorTile::DoorTile(glm::vec2 worldPos)
     : Tile(worldPos), m_BaseWorldPos(worldPos)
 {
     m_IsWall = true;
-    m_WorldPos.y += TILE_SIZE / 2.0f;  // 上移 24px，Sprite 底部對齊格子底部
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww001.png"));
-    SetZIndex(0.5f);
+    m_BaseZ = glm::clamp(50.0f - worldPos.y / 64.0f, 2.0f, 98.0f);
+    SetZIndex(m_BaseZ);
     SetVisible(true);
 }
 
 void DoorTile::Open() {
     m_IsWall = false;
-    m_WorldPos = m_BaseWorldPos;        // 還原，ww002 正常置中
+    m_WorldPos = m_BaseWorldPos;
+    m_WorldPos.y -= TILE_SIZE / 2.0f;
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww002.png"));
-    SetZIndex(0.0f);
+    SetZIndex(m_BaseZ);
 }
 
 void DoorTile::Close() {
     m_IsWall = true;
     m_WorldPos = m_BaseWorldPos;
-    m_WorldPos.y += TILE_SIZE / 2.0f;  // 還原偏移
     SetDrawable(std::make_shared<Util::Image>(RESOURCE_DIR "/Tiles/ww001.png"));
-    SetZIndex(0.5f);
+    SetZIndex(m_BaseZ);
 }
 
 void SouthFaceTile::UpdateZIndex() {
@@ -82,5 +92,5 @@ void SouthFaceTile::UpdateZIndex() {
     // worldY ≈ +288（北側地板） → Z ≈ 2.0f（後面）
     // worldY ≈ -288（南側地板） → Z ≈ 98.0f（前面）
     // ⚠️ 上限必須 ≥ 玩家最大 Z(≈98)，否則玩家會畫在南牆面前方
-    SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 6.0f, 2.0f, 98.0f));
+    SetZIndex(glm::clamp(50.0f - m_WorldPos.y / 64.0f, 2.0f, 98.0f));
 }
