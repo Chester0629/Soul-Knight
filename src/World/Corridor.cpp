@@ -11,10 +11,14 @@ std::string Corridor::RandFloor() {
     return std::string(RESOURCE_DIR "/Tiles/") + FLOORS[m_Rng() % 9] + ".png";
 }
 void Corridor::ApplyWall(Util::GameObject* o) {
-    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.wall));
+    static const char* W[] = {"w001","w002"};
+    o->SetDrawable(std::make_shared<Util::Image>(
+        std::string(RESOURCE_DIR "/Tiles/") + W[m_Rng() % 2] + ".png"));
 }
 void Corridor::ApplyFace(Util::GameObject* o) {
-    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.face));
+    static const char* F[] = {"w004","w005"};
+    o->SetDrawable(std::make_shared<Util::Image>(
+        std::string(RESOURCE_DIR "/Tiles/") + F[m_Rng() % 2] + ".png"));
 }
 
 // ── 建構 ─────────────────────────────────────────────────────────────────────
@@ -26,12 +30,6 @@ Corridor::Corridor(glm::vec2 centerPos, int cols, int rows, bool isHorizontal)
     const unsigned seed = static_cast<unsigned>(static_cast<int>(centerPos.x)) * 1031u
                         ^ static_cast<unsigned>(static_cast<int>(centerPos.y)) * 113u;
     m_Rng.seed(seed);
-    if (m_Rng() & 1u) {
-        m_Theme = {RESOURCE_DIR "/Tiles/w001.png", RESOURCE_DIR "/Tiles/w004.png"};
-    } else {
-        m_Theme = {RESOURCE_DIR "/Tiles/w002.png", RESOURCE_DIR "/Tiles/w005.png"};
-    }
-
     m_TileMap.assign(m_Rows, std::vector<std::shared_ptr<Tile>>(m_Cols, nullptr));
     Build();
 }

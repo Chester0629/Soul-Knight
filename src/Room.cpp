@@ -13,10 +13,14 @@ std::string Room::RandFloor() {
 }
 
 void Room::ApplyWall(Util::GameObject* o) {
-    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.wall));
+    static const char* W[] = {"w001","w002"};
+    o->SetDrawable(std::make_shared<Util::Image>(
+        std::string(RESOURCE_DIR "/Tiles/") + W[m_Rng() % 2] + ".png"));
 }
 void Room::ApplyFace(Util::GameObject* o) {
-    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.face));
+    static const char* F[] = {"w004","w005"};
+    o->SetDrawable(std::make_shared<Util::Image>(
+        std::string(RESOURCE_DIR "/Tiles/") + F[m_Rng() % 2] + ".png"));
 }
 
 // ── 建構 ─────────────────────────────────────────────────────────────────────
@@ -28,11 +32,6 @@ Room::Room(RoomTemplate tmpl, glm::ivec2 gridPos, glm::vec2 worldOffset)
 {
     // 依 gridPos 確定性播種（相同 seed 相同房間外觀）
     m_Rng.seed(static_cast<unsigned>(gridPos.x * 1031u + gridPos.y * 113u + 7u));
-    if (m_Rng() & 1u) {
-        m_Theme = {RESOURCE_DIR "/Tiles/w001.png", RESOURCE_DIR "/Tiles/w004.png"};
-    } else {
-        m_Theme = {RESOURCE_DIR "/Tiles/w002.png", RESOURCE_DIR "/Tiles/w005.png"};
-    }
 
     const auto sz = RoomSpec::GetSize(tmpl);
     m_Cols = sz.cols;

@@ -48,8 +48,6 @@ private:
 
     void Build();
 
-    struct TileTheme { std::string wall, face; };
-    TileTheme    m_Theme;
     std::mt19937 m_Rng;
     std::string  RandFloor();
     void ApplyWall(Util::GameObject* o);
