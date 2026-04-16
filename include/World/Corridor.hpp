@@ -4,6 +4,8 @@
 #include "Util/Renderer.hpp"
 
 #include <memory>
+#include <random>
+#include <string>
 #include <vector>
 
 // Corridor — 連接兩個 Room 的走廊
@@ -45,4 +47,11 @@ private:
     std::vector<std::shared_ptr<Tile>>              m_BottomFill;    // 補底地板（最後一排原始位置）
 
     void Build();
+
+    struct TileTheme { std::string wall, face; };
+    TileTheme    m_Theme;
+    std::mt19937 m_Rng;
+    std::string  RandFloor();
+    void ApplyWall(Util::GameObject* o);
+    void ApplyFace(Util::GameObject* o);
 };

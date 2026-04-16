@@ -1,8 +1,37 @@
 #include "World/Corridor.hpp"
+#include "Util/Image.hpp"
+
+// ── Tile 主題輔助 ─────────────────────────────────────────────────────────────
+
+std::string Corridor::RandFloor() {
+    static const char* FLOORS[] = {
+        "f101","f101","f101","f101",
+        "f102","f103","f104","f105","f106"
+    };
+    return std::string(RESOURCE_DIR "/Tiles/") + FLOORS[m_Rng() % 9] + ".png";
+}
+void Corridor::ApplyWall(Util::GameObject* o) {
+    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.wall));
+}
+void Corridor::ApplyFace(Util::GameObject* o) {
+    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.face));
+}
+
+// ── 建構 ─────────────────────────────────────────────────────────────────────
 
 Corridor::Corridor(glm::vec2 centerPos, int cols, int rows, bool isHorizontal)
     : m_Center(centerPos), m_Cols(cols), m_Rows(rows), m_IsHorizontal(isHorizontal)
 {
+    // 以中心座標整數位元播種（確定性，避免浮點誤差）
+    const unsigned seed = static_cast<unsigned>(static_cast<int>(centerPos.x)) * 1031u
+                        ^ static_cast<unsigned>(static_cast<int>(centerPos.y)) * 113u;
+    m_Rng.seed(seed);
+    if (m_Rng() & 1u) {
+        m_Theme = {RESOURCE_DIR "/Tiles/w001.png", RESOURCE_DIR "/Tiles/w004.png"};
+    } else {
+        m_Theme = {RESOURCE_DIR "/Tiles/w002.png", RESOURCE_DIR "/Tiles/w005.png"};
+    }
+
     m_TileMap.assign(m_Rows, std::vector<std::shared_ptr<Tile>>(m_Cols, nullptr));
     Build();
 }
@@ -22,16 +51,6 @@ bool Corridor::IsWallAtGrid(int row, int col) const {
 }
 
 // ── 生成 TileMap ──────────────────────────────────────────────────────────────
-// 水平走廊（H_CORR_W=9 rows）：
-//   row 0           : FloorTile +TILE_SIZE/4（落在相鄰房間地板區）
-//   row 1           : NorthFaceTile +TILE_SIZE/4（w004，佔格子上半部）
-//   row 2..m_Rows-3 : FloorTile +TILE_SIZE/4（通道，對齊 NorthFaceTile 底部）
-//   row m_Rows-2    : WallTile（Z=97.5f，SouthWallCap）
-//   row m_Rows-1    : SouthFaceTile（Y-Sort Z）
-//
-// 垂直走廊（V_CORR_W=8 cols）：
-//   col 0 / col 7   : WallTile（左右牆）
-//   col 1..6        : FloorTile（通道）
 void Corridor::Build() {
     for (int r = 0; r < m_Rows; r++) {
         for (int c = 0; c < m_Cols; c++) {
@@ -44,48 +63,54 @@ void Corridor::Build() {
                 const bool isSFace    = (r == m_Rows - 1);
 
                 if (isTopCap) {
-                    // 落在相鄰房間地板區，同步往上移 TILE_SIZE/4
-                    m_TileMap[r][c] = std::make_shared<WallTile>(
-                        glm::vec2{pos.x, pos.y});
+                    auto t = std::make_shared<WallTile>(glm::vec2{pos.x, pos.y});
+                    ApplyWall(t.get());
+                    m_TileMap[r][c] = std::move(t);
 
                 } else if (isNFace) {
-                    // 水平走廊頂部牆面往下移 24px：
-                    // NorthFaceTile 建構子會 +12px，所以傳入 pos.y - 24px，
-                    // 最終視覺中心 = pos.y - 24 + 12 = pos.y - 12
-                    m_TileMap[r][c] = std::make_shared<NorthFaceTile>(
-                        glm::vec2{pos.x, pos.y});
+                    auto t = std::make_shared<NorthFaceTile>(glm::vec2{pos.x, pos.y});
+                    ApplyFace(t.get());
+                    m_TileMap[r][c] = std::move(t);
 
                 } else if (isSWallCap) {
-                    auto tile = std::make_shared<WallTile>(pos);
-                    tile->SetZIndex(97.5f);
-                    m_TileMap[r][c] = std::move(tile);
+                    auto t = std::make_shared<WallTile>(pos);
+                    ApplyWall(t.get());
+                    t->SetZIndex(97.5f);
+                    m_TileMap[r][c] = std::move(t);
 
                 } else if (isSFace) {
-                    auto tile = std::make_shared<SouthFaceTile>(pos);
-                    m_TileMap[r][c] = tile;
-                    m_SouthFaces.push_back(std::move(tile));
+                    auto t = std::make_shared<SouthFaceTile>(pos);
+                    ApplyFace(t.get());
+                    m_TileMap[r][c] = t;
+                    m_SouthFaces.push_back(std::move(t));
 
                 } else {
-                    // 通道地板往上移 TILE_SIZE/2
-                    m_TileMap[r][c] = std::make_shared<FloorTile>(
+                    auto t = std::make_shared<FloorTile>(
                         glm::vec2{pos.x, pos.y + TILE_SIZE * 0.5f});
-                    // 最後一排（緊接 SouthWallCap）補底
+                    t->SetDrawable(std::make_shared<Util::Image>(RandFloor()));
+                    m_TileMap[r][c] = std::move(t);
                     if (r == m_Rows - 3) {
-                        m_BottomFill.push_back(std::make_shared<FloorTile>(glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f}));
+                        auto b = std::make_shared<FloorTile>(
+                            glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f});
+                        b->SetDrawable(std::make_shared<Util::Image>(RandFloor()));
+                        m_BottomFill.push_back(std::move(b));
                     }
                 }
 
             } else {
-                // ── 垂直走廊（V_CORR_W=8 cols）─────────────────────────────
+                // ── 垂直走廊 ─────────────────────────────────────────────────
                 const bool isWall = (c == 0 || c == m_Cols - 1);
                 if (isWall) {
-                    auto tile = std::make_shared<WallTile>(pos);
-                    // 最頂兩行的牆需蓋過相鄰房間南牆的 Z
-                    if      (r == 0) tile->SetZIndex(98.0f);
-                    else if (r == 1) tile->SetZIndex(99.0f);
-                    m_TileMap[r][c] = std::move(tile);
+                    auto t = std::make_shared<WallTile>(pos);
+                    ApplyWall(t.get());
+                    if      (r == 0) t->SetZIndex(98.0f);
+                    else if (r == 1) t->SetZIndex(99.0f);
+                    m_TileMap[r][c] = std::move(t);
                 } else {
-                    m_TileMap[r][c] = std::make_shared<FloorTile>(glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f});
+                    auto t = std::make_shared<FloorTile>(
+                        glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f});
+                    t->SetDrawable(std::make_shared<Util::Image>(RandFloor()));
+                    m_TileMap[r][c] = std::move(t);
                 }
             }
         }

@@ -4,6 +4,8 @@
 #include "Util/Renderer.hpp"
 
 #include <memory>
+#include <random>
+#include <string>
 #include <vector>
 
 class Enemy;  // 前向宣告（Room 持有非擁有式指標）
@@ -110,5 +112,13 @@ private:
     bool                                   m_DoorsOpened  = false;
     bool                                   m_CombatStarted = false;
     bool                                   m_Visited       = false;
+
+    // Tile 隨機主題（每房間構建時決定，依 gridPos 確定性播種）
+    struct TileTheme { std::string wall, face; };
+    TileTheme    m_Theme;
+    std::mt19937 m_Rng;
+    std::string  RandFloor();            // 每格隨機地板路徑（f101 佔 80%）
+    void ApplyWall(Util::GameObject* o); // 套用 m_Theme.wall
+    void ApplyFace(Util::GameObject* o); // 套用 m_Theme.face
 
 };

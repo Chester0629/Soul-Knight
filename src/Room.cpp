@@ -1,11 +1,39 @@
 #include "Room.hpp"
 #include "Entity/Enemy.hpp"
+#include "Util/Image.hpp"
+
+// ── Tile 隨機主題輔助 ─────────────────────────────────────────────────────────
+
+std::string Room::RandFloor() {
+    static const char* FLOORS[] = {
+        "f101","f101","f101","f101",   // 80%：基礎地板
+        "f102","f103","f104","f105","f106"
+    };
+    return std::string(RESOURCE_DIR "/Tiles/") + FLOORS[m_Rng() % 9] + ".png";
+}
+
+void Room::ApplyWall(Util::GameObject* o) {
+    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.wall));
+}
+void Room::ApplyFace(Util::GameObject* o) {
+    o->SetDrawable(std::make_shared<Util::Image>(m_Theme.face));
+}
+
+// ── 建構 ─────────────────────────────────────────────────────────────────────
 
 Room::Room(RoomTemplate tmpl, glm::ivec2 gridPos, glm::vec2 worldOffset)
     : m_Template(tmpl)
     , m_GridPos(gridPos)
     , m_WorldOffset(worldOffset)
 {
+    // 依 gridPos 確定性播種（相同 seed 相同房間外觀）
+    m_Rng.seed(static_cast<unsigned>(gridPos.x * 1031u + gridPos.y * 113u + 7u));
+    if (m_Rng() & 1u) {
+        m_Theme = {RESOURCE_DIR "/Tiles/w001.png", RESOURCE_DIR "/Tiles/w004.png"};
+    } else {
+        m_Theme = {RESOURCE_DIR "/Tiles/w002.png", RESOURCE_DIR "/Tiles/w005.png"};
+    }
+
     const auto sz = RoomSpec::GetSize(tmpl);
     m_Cols = sz.cols;
     m_Rows = sz.rows;
@@ -48,29 +76,38 @@ void Room::Build() {
             const bool isSFace    = (row == m_Rows - 1);
 
             if ((isCapRow || isEdgeCol) && !isSFace) {
-                m_TileMap[row][col] = std::make_shared<WallTile>(pos);
+                auto t = std::make_shared<WallTile>(pos);
+                ApplyWall(t.get());
+                m_TileMap[row][col] = std::move(t);
 
             } else if (isNFace) {
-                // NorthFaceTile 直接放在格子位置，不加 backfill
-                m_TileMap[row][col] = std::make_shared<NorthFaceTile>(pos);
+                auto t = std::make_shared<NorthFaceTile>(pos);
+                ApplyFace(t.get());
+                m_TileMap[row][col] = std::move(t);
 
             } else if (isSWallCap) {
-                auto tile = std::make_shared<WallTile>(pos);
-                tile->SetZIndex(97.5f);
-                m_TileMap[row][col] = std::move(tile);
+                auto t = std::make_shared<WallTile>(pos);
+                ApplyWall(t.get());
+                t->SetZIndex(97.5f);
+                m_TileMap[row][col] = std::move(t);
 
             } else if (isSFace) {
-                auto tile = std::make_shared<SouthFaceTile>(pos);
-                m_TileMap[row][col] = tile;
-                m_SouthFaces.push_back(std::move(tile));
+                auto t = std::make_shared<SouthFaceTile>(pos);
+                ApplyFace(t.get());
+                m_TileMap[row][col] = t;
+                m_SouthFaces.push_back(std::move(t));
 
             } else {
-                // 內部地板往上移 TILE_SIZE/2，對齊 NorthFaceTile 底部
-                m_TileMap[row][col] = std::make_shared<FloorTile>(
+                auto t = std::make_shared<FloorTile>(
                     glm::vec2{pos.x, pos.y + TILE_SIZE * 0.5f});
-                // 最後一排地板（緊接 SouthWallCap 上方）補一排在原始位置，填補上移後的缺口
+                t->SetDrawable(std::make_shared<Util::Image>(RandFloor()));
+                m_TileMap[row][col] = std::move(t);
+
                 if (row == m_Rows - 3) {
-                    m_BottomFill.push_back(std::make_shared<FloorTile>(glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f}));
+                    auto b = std::make_shared<FloorTile>(
+                        glm::vec2{pos.x, pos.y - TILE_SIZE * 0.5f});
+                    b->SetDrawable(std::make_shared<Util::Image>(RandFloor()));
+                    m_BottomFill.push_back(std::move(b));
                 }
             }
         }
@@ -115,22 +152,24 @@ void Room::OpenDoor(Direction dir) {
     case Direction::EAST: {
         const int col = m_Cols - 1;
         const int rS  = (m_Rows - 6) / 2;
-        // 門洞上方升格為 SouthWallCap（Z=97.5f）
         {
             auto cap = std::make_shared<WallTile>(TileToWorld(rS - 1, col));
+            ApplyWall(cap.get());
             cap->SetZIndex(97.5f);
             m_TileMap[rS - 1][col] = std::move(cap);
-            m_SideFaces.push_back(std::make_shared<SideWallFaceTile>(TileToWorld(rS, col)));
+            auto sf = std::make_shared<SideWallFaceTile>(TileToWorld(rS, col));
+            ApplyFace(sf.get());
+            m_SideFaces.push_back(std::move(sf));
         }
         for (int r = rS; r < rS + 6; r++) {
             auto door = std::make_shared<DoorTile>(TileToWorld(r, col));
             m_TileMap[r][col] = door;
             m_Doors.push_back(std::move(door));
         }
-        // 門底下的牆升格為 Y-Sort Z
         {
             const glm::vec2 belowPos = TileToWorld(rS + 6, col);
             auto wall = std::make_shared<WallTile>(belowPos);
+            ApplyWall(wall.get());
             wall->SetZIndex(glm::clamp(50.0f - belowPos.y / 64.0f, 2.0f, 98.0f));
             m_TileMap[rS + 6][col] = std::move(wall);
         }
@@ -142,19 +181,22 @@ void Room::OpenDoor(Direction dir) {
         const int rS  = (m_Rows - 6) / 2;
         {
             auto cap = std::make_shared<WallTile>(TileToWorld(rS - 1, col));
+            ApplyWall(cap.get());
             cap->SetZIndex(97.5f);
             m_TileMap[rS - 1][col] = std::move(cap);
-            m_SideFaces.push_back(std::make_shared<SideWallFaceTile>(TileToWorld(rS, col)));
+            auto sf = std::make_shared<SideWallFaceTile>(TileToWorld(rS, col));
+            ApplyFace(sf.get());
+            m_SideFaces.push_back(std::move(sf));
         }
         for (int r = rS; r < rS + 6; r++) {
             auto door = std::make_shared<DoorTile>(TileToWorld(r, col));
             m_TileMap[r][col] = door;
             m_Doors.push_back(std::move(door));
         }
-        // 門底下的牆升格為 Y-Sort Z
         {
             const glm::vec2 belowPos = TileToWorld(rS + 6, col);
             auto wall = std::make_shared<WallTile>(belowPos);
+            ApplyWall(wall.get());
             wall->SetZIndex(glm::clamp(50.0f - belowPos.y / 64.0f, 2.0f, 98.0f));
             m_TileMap[rS + 6][col] = std::move(wall);
         }
