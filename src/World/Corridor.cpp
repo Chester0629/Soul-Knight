@@ -10,15 +10,15 @@ std::string Corridor::RandFloor() {
     };
     return std::string(RESOURCE_DIR "/Tiles/") + FLOORS[m_Rng() % 9] + ".png";
 }
-void Corridor::ApplyWall(Util::GameObject* o) {
+void Corridor::ApplyWall(Util::GameObject* o, int s) {
     static const char* W[] = {"w001","w002"};
     o->SetDrawable(std::make_shared<Util::Image>(
-        std::string(RESOURCE_DIR "/Tiles/") + W[m_Rng() % 2] + ".png"));
+        std::string(RESOURCE_DIR "/Tiles/") + W[s & 1] + ".png"));
 }
-void Corridor::ApplyFace(Util::GameObject* o) {
+void Corridor::ApplyFace(Util::GameObject* o, int s) {
     static const char* F[] = {"w004","w005"};
     o->SetDrawable(std::make_shared<Util::Image>(
-        std::string(RESOURCE_DIR "/Tiles/") + F[m_Rng() % 2] + ".png"));
+        std::string(RESOURCE_DIR "/Tiles/") + F[s & 1] + ".png"));
 }
 
 // ── 建構 ─────────────────────────────────────────────────────────────────────
@@ -50,6 +50,13 @@ bool Corridor::IsWallAtGrid(int row, int col) const {
 
 // ── 生成 TileMap ──────────────────────────────────────────────────────────────
 void Corridor::Build() {
+    // 水平走廊：每欄預抽 set，確保 cap(r=0) + face(r=1) 同欄用同 set
+    std::vector<int> northSet(m_Cols), southSet(m_Cols);
+    for (int c = 0; c < m_Cols; c++) {
+        northSet[c] = static_cast<int>(m_Rng() & 1u);
+        southSet[c] = static_cast<int>(m_Rng() & 1u);
+    }
+
     for (int r = 0; r < m_Rows; r++) {
         for (int c = 0; c < m_Cols; c++) {
             const glm::vec2 pos = TileToWorld(r, c);
@@ -62,23 +69,23 @@ void Corridor::Build() {
 
                 if (isTopCap) {
                     auto t = std::make_shared<WallTile>(glm::vec2{pos.x, pos.y});
-                    ApplyWall(t.get());
+                    ApplyWall(t.get(), northSet[c]);
                     m_TileMap[r][c] = std::move(t);
 
                 } else if (isNFace) {
                     auto t = std::make_shared<NorthFaceTile>(glm::vec2{pos.x, pos.y});
-                    ApplyFace(t.get());
+                    ApplyFace(t.get(), northSet[c]);  // 同欄同 set
                     m_TileMap[r][c] = std::move(t);
 
                 } else if (isSWallCap) {
                     auto t = std::make_shared<WallTile>(pos);
-                    ApplyWall(t.get());
+                    ApplyWall(t.get(), southSet[c]);
                     t->SetZIndex(97.5f);
                     m_TileMap[r][c] = std::move(t);
 
                 } else if (isSFace) {
                     auto t = std::make_shared<SouthFaceTile>(pos);
-                    ApplyFace(t.get());
+                    ApplyFace(t.get(), southSet[c]);  // 同欄同 set
                     m_TileMap[r][c] = t;
                     m_SouthFaces.push_back(std::move(t));
 
@@ -96,11 +103,11 @@ void Corridor::Build() {
                 }
 
             } else {
-                // ── 垂直走廊 ─────────────────────────────────────────────────
+                // ── 垂直走廊：側牆無 face pair，每格獨立抽 ─────────────────
                 const bool isWall = (c == 0 || c == m_Cols - 1);
                 if (isWall) {
                     auto t = std::make_shared<WallTile>(pos);
-                    ApplyWall(t.get());
+                    ApplyWall(t.get(), static_cast<int>(m_Rng() & 1u));
                     if      (r == 0) t->SetZIndex(98.0f);
                     else if (r == 1) t->SetZIndex(99.0f);
                     m_TileMap[r][c] = std::move(t);

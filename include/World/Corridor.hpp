@@ -50,6 +50,6 @@ private:
 
     std::mt19937 m_Rng;
     std::string  RandFloor();
-    void ApplyWall(Util::GameObject* o);
-    void ApplyFace(Util::GameObject* o);
+    void ApplyWall(Util::GameObject* o, int s);
+    void ApplyFace(Util::GameObject* o, int s);
 };

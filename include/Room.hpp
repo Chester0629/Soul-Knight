@@ -115,8 +115,8 @@ private:
 
     // Tile 隨機（依 gridPos 確定性播種，每磚獨立抽選）
     std::mt19937 m_Rng;
-    std::string  RandFloor();            // 每格隨機地板路徑（f101 佔 80%）
-    void ApplyWall(Util::GameObject* o); // 套用 m_Theme.wall
-    void ApplyFace(Util::GameObject* o); // 套用 m_Theme.face
+    std::string  RandFloor();                  // 每格隨機地板路徑（f101 佔 80%）
+    void ApplyWall(Util::GameObject* o, int s); // s=0→w001, s=1→w002
+    void ApplyFace(Util::GameObject* o, int s); // s=0→w004, s=1→w005
 
 };
