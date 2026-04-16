@@ -32,8 +32,8 @@ void App::Start() {
     m_EnemyManager.AddToRenderer(m_Root);
     m_EnemyManager.SetTarget(m_Player.get());
 
-    // Step 3.5：接近觸發懶生成
-    m_World.SetOnApproachEnemyRoom([this](int idx) {
+    // Step 3.5：進房觸發懶生成
+    m_World.SetOnEnterEnemyRoom([this](int idx) {
         SpawnEnemiesInRoom(idx);
     });
 
@@ -133,5 +133,4 @@ void App::SpawnEnemiesInRoom(int roomIdx) {
         m_EnemyManager.AddEnemyLive(e);
     }
     m_World.AssignEnemiesToRoom(roomIdx, std::move(ptrs));
-    m_World.OpenRoomForEntry(roomIdx);
 }

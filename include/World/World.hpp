@@ -27,13 +27,10 @@ public:
     // Step 3.3：每幀驅動門的狀態（進房關門、敵人全清 → 開門）
     void Update(glm::vec2 playerPos);
 
-    // Step 3.5：懶生成 callback（App 設定，接近敵人房間時呼叫）
-    void SetOnApproachEnemyRoom(std::function<void(int)> cb) {
-        m_OnApproachEnemyRoom = std::move(cb);
+    // Step 3.5：懶生成 callback（App 設定，玩家進入敵人房間時呼叫）
+    void SetOnEnterEnemyRoom(std::function<void(int)> cb) {
+        m_OnEnterEnemyRoom = std::move(cb);
     }
-
-    // 直接操作 Room（供 App callback 使用）
-    void OpenRoomForEntry(int i) { m_Rooms[i]->OpenForEntry(); }
 
     // Step 3.3：將敵人指派給指定房間（非擁有式）
     void AssignEnemiesToRoom(int roomIdx, std::vector<Enemy*> enemies);
@@ -75,7 +72,7 @@ private:
     std::vector<RoomType>                  m_RoomTypes;      // 與 m_Rooms 平行
     std::vector<std::unique_ptr<Corridor>> m_Corridors;
     int                                    m_CurrentRoomIdx = -1;
-    std::function<void(int)>               m_OnApproachEnemyRoom;
+    std::function<void(int)>               m_OnEnterEnemyRoom;
 
     // (gridRow, gridCol) → 世界中心座標
     static glm::vec2 GridToWorld(glm::ivec2 gridPos);

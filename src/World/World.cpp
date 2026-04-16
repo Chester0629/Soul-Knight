@@ -97,8 +97,9 @@ void World::Generate(unsigned seed, int floorIndex) {
         );
     }
 
-    // 門的初始狀態由 App::Start() 完成 AssignEnemiesToRoom 後呼叫
-    // World::Update(spawnPos) 觸發，此時才能正確區分有/無敵人房間
+    // 所有門初始為開（讓玩家可自由進入）；LockDoors() 在進房時觸發
+    for (auto& room : m_Rooms)
+        room->OpenForEntry();
 }
 
 // ── Renderer 整合 ─────────────────────────────────────────────────────────────
@@ -151,19 +152,12 @@ void World::Update(glm::vec2 playerPos) {
         if (newRoomIdx >= 0) {
             Room& room = *m_Rooms[newRoomIdx];
             room.SetVisited();
-            // 玩家進入敵人房間且已生成敵人 → 關門（開始戰鬥）
-            if (room.IsEnemyRoom() && room.AreEnemiesSpawned() && !room.IsCleared())
+            if (room.IsEnemyRoom() && !room.IsCleared()) {
+                // 首次進入：委託 App 生成敵人（callback 內完成 AssignEnemies）
+                if (!room.AreEnemiesSpawned() && m_OnEnterEnemyRoom)
+                    m_OnEnterEnemyRoom(newRoomIdx);
+                // 生成後（或再次進入未清場）→ 關門
                 room.LockDoors();
-        }
-    }
-
-    // 接近觸發：對尚未生成敵人的敵人房間，接近時通知 App（透過 callback）
-    if (m_OnApproachEnemyRoom) {
-        for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
-            Room& room = *m_Rooms[i];
-            if (!room.IsEnemyRoom() || room.AreEnemiesSpawned()) continue;
-            if (room.IsNearDoor(playerPos)) {
-                m_OnApproachEnemyRoom(i);  // App 負責生成敵人並呼叫 OpenForEntry
             }
         }
     }
