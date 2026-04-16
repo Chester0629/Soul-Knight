@@ -24,9 +24,10 @@ void World::Generate(unsigned seed, int floorIndex) {
     // 1. 建立所有 Room（帶 worldOffset）
     for (const auto& node : layout.rooms) {
         glm::vec2 offset = GridToWorld(node.gridPos);
-        m_Rooms.push_back(
-            std::make_unique<Room>(node.tmpl, node.gridPos, offset)
-        );
+        auto room = std::make_unique<Room>(node.tmpl, node.gridPos, offset);
+        if (node.type == RoomType::BASIC)
+            room->SetIsEnemyRoom(true);
+        m_Rooms.push_back(std::move(room));
         m_RoomTypes.push_back(node.type);
     }
 
@@ -147,14 +148,26 @@ void World::Update(glm::vec2 playerPos) {
     const int newRoomIdx = GetRoomIndexAt(m_Rooms, playerPos);
     if (newRoomIdx != m_CurrentRoomIdx) {
         m_CurrentRoomIdx = newRoomIdx;
-        // 玩家進入新房間：若有存活敵人 → 關門（開始戰鬥）
         if (newRoomIdx >= 0) {
             Room& room = *m_Rooms[newRoomIdx];
             room.SetVisited();
-            if (room.HasEnemies() && !room.IsCleared())
+            // 玩家進入敵人房間且已生成敵人 → 關門（開始戰鬥）
+            if (room.IsEnemyRoom() && room.AreEnemiesSpawned() && !room.IsCleared())
                 room.LockDoors();
         }
     }
+
+    // 接近觸發：對尚未生成敵人的敵人房間，接近時通知 App（透過 callback）
+    if (m_OnApproachEnemyRoom) {
+        for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
+            Room& room = *m_Rooms[i];
+            if (!room.IsEnemyRoom() || room.AreEnemiesSpawned()) continue;
+            if (room.IsNearDoor(playerPos)) {
+                m_OnApproachEnemyRoom(i);  // App 負責生成敵人並呼叫 OpenForEntry
+            }
+        }
+    }
+
     // 每幀檢查：已開戰且敵人全清 → 開門
     for (auto& room : m_Rooms)
         room->CheckAndOpenDoors();

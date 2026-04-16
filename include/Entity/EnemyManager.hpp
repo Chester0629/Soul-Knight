@@ -15,6 +15,8 @@ class Player;
 class EnemyManager {
 public:
     void AddEnemy(std::shared_ptr<Enemy> enemy);
+    // 懶生成：生成後立即加入渲染樹（需先呼叫 SetRenderer / SetTarget）
+    void AddEnemyLive(std::shared_ptr<Enemy> enemy);
     void AddToRenderer(Util::Renderer& renderer);
     void SetTarget(Player* player);
     void Update(float dt);
@@ -24,4 +26,6 @@ public:
 
 private:
     std::vector<std::shared_ptr<Enemy>> m_Enemies;
+    Util::Renderer*                     m_Renderer = nullptr;
+    Player*                             m_Target   = nullptr;
 };

@@ -6,13 +6,21 @@ void EnemyManager::AddEnemy(std::shared_ptr<Enemy> enemy) {
 }
 
 void EnemyManager::AddToRenderer(Util::Renderer& renderer) {
+    m_Renderer = &renderer;
     for (auto& e : m_Enemies)
         renderer.AddChild(e);
 }
 
 void EnemyManager::SetTarget(Player* player) {
+    m_Target = player;
     for (auto& e : m_Enemies)
         e->SetTarget(player);
+}
+
+void EnemyManager::AddEnemyLive(std::shared_ptr<Enemy> enemy) {
+    if (m_Target)   enemy->SetTarget(m_Target);
+    if (m_Renderer) m_Renderer->AddChild(enemy);
+    m_Enemies.push_back(std::move(enemy));
 }
 
 void EnemyManager::Update(float dt) {

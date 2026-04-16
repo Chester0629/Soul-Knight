@@ -36,4 +36,8 @@ private:
     EnemyManager             m_EnemyManager;
     HUD                      m_HUD;
     MiniMap                  m_MiniMap;
+
+    unsigned m_Seed = 0;
+
+    void SpawnEnemiesInRoom(int roomIdx);
 };

@@ -78,6 +78,14 @@ public:
     void SetVisited()    { m_Visited = true; }
     bool IsVisited() const { return m_Visited; }
 
+    // 懶生成 + 門控制（Step 3.5）
+    void SetIsEnemyRoom(bool v)    { m_IsEnemyRoom = v; }
+    bool IsEnemyRoom()       const { return m_IsEnemyRoom; }
+    bool AreEnemiesSpawned() const { return m_EnemiesSpawned; }
+    void MarkEnemiesSpawned()      { m_EnemiesSpawned = true; }
+    void OpenForEntry();           // 接近觸發：開門不設永久旗標（讓 LockDoors 仍可運作）
+    bool IsNearDoor(glm::vec2 playerPos) const;  // 擴展 AABB 接近判定
+
 
     bool IsWallAt(int row, int col) const;
     int GetCols()  const { return m_Cols; }
@@ -106,12 +114,14 @@ private:
     std::vector<std::shared_ptr<SideWallFaceTile>> m_SideFaces;  // 東西牆面（Y-Sort，視覺用）
     std::vector<std::shared_ptr<Tile>>              m_BottomFill; // 補底地板（最後一排原始位置）
 
-    // Step 3.3
+    // Step 3.3 / 3.5
     std::vector<std::shared_ptr<DoorTile>> m_Doors;
     std::vector<Enemy*>                    m_Enemies;         // 非擁有
-    bool                                   m_DoorsOpened  = false;
-    bool                                   m_CombatStarted = false;
-    bool                                   m_Visited       = false;
+    bool                                   m_DoorsOpened   = false;
+    bool                                   m_CombatStarted  = false;
+    bool                                   m_Visited        = false;
+    bool                                   m_IsEnemyRoom    = false;
+    bool                                   m_EnemiesSpawned = false;
 
     // Tile 隨機（依 gridPos 確定性播種，每磚獨立抽選）
     std::mt19937 m_Rng;

@@ -2,6 +2,8 @@
 #include "Entity/Enemy.hpp"
 #include "Util/Image.hpp"
 
+#include <cmath>
+
 // ── Tile 隨機主題輔助 ─────────────────────────────────────────────────────────
 
 std::string Room::RandFloor() {
@@ -301,9 +303,26 @@ void Room::DebugCloseDoors() {
 
 void Room::CheckAndOpenDoors() {
     if (m_DoorsOpened) return;
-    if (!HasEnemies()) { OpenAllDoors(); return; }  // 無敵人 → 立刻開啟
-    if (!m_CombatStarted) return;                   // 有敵人但尚未進房
-    if (IsCleared()) OpenAllDoors();                // 有敵人且全清場
+    // 敵人房間且尚未生成敵人 → 保持關閉（等接近觸發 OpenForEntry）
+    if (m_IsEnemyRoom && !m_EnemiesSpawned) return;
+    if (!HasEnemies()) { OpenAllDoors(); return; }
+    if (!m_CombatStarted) return;
+    if (IsCleared()) OpenAllDoors();
+}
+
+void Room::OpenForEntry() {
+    // 開門讓玩家進入，但不設 m_DoorsOpened，使 LockDoors() 仍可觸發
+    for (auto& door : m_Doors)
+        door->Open();
+}
+
+bool Room::IsNearDoor(glm::vec2 playerPos) const {
+    // 擴大 2 格的 AABB 接近判定
+    const float margin = TILE_SIZE * 2.0f;
+    const float hx = m_Cols * TILE_SIZE / 2.0f + margin;
+    const float hy = m_Rows * TILE_SIZE / 2.0f + margin;
+    return std::abs(playerPos.x - m_WorldOffset.x) < hx &&
+           std::abs(playerPos.y - m_WorldOffset.y) < hy;
 }
 
 // ── 碰撞查詢 ──────────────────────────────────────────────────────────────────

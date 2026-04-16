@@ -5,6 +5,7 @@
 #include "World/DungeonGenerator.hpp"
 #include "Util/Renderer.hpp"
 
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -25,6 +26,14 @@ public:
 
     // Step 3.3：每幀驅動門的狀態（進房關門、敵人全清 → 開門）
     void Update(glm::vec2 playerPos);
+
+    // Step 3.5：懶生成 callback（App 設定，接近敵人房間時呼叫）
+    void SetOnApproachEnemyRoom(std::function<void(int)> cb) {
+        m_OnApproachEnemyRoom = std::move(cb);
+    }
+
+    // 直接操作 Room（供 App callback 使用）
+    void OpenRoomForEntry(int i) { m_Rooms[i]->OpenForEntry(); }
 
     // Step 3.3：將敵人指派給指定房間（非擁有式）
     void AssignEnemiesToRoom(int roomIdx, std::vector<Enemy*> enemies);
@@ -49,9 +58,13 @@ public:
     bool           IsRoomVisited(int i)  const { return m_Rooms[i]->IsVisited(); }
 
     // 敵人生成輔助
-    RoomType   GetRoomType(int i) const { return m_RoomTypes[i]; }
-    int        GetRoomCols(int i) const { return m_Rooms[i]->GetCols(); }
-    int        GetRoomRows(int i) const { return m_Rooms[i]->GetRows(); }
+    RoomType   GetRoomType(int i)          const { return m_RoomTypes[i]; }
+    int        GetRoomCols(int i)          const { return m_Rooms[i]->GetCols(); }
+    int        GetRoomRows(int i)          const { return m_Rooms[i]->GetRows(); }
+    bool       IsEnemyRoom(int i)          const { return m_Rooms[i]->IsEnemyRoom(); }
+    bool       AreEnemiesSpawned(int i)    const { return m_Rooms[i]->AreEnemiesSpawned(); }
+    void       MarkRoomEnemiesSpawned(int i)     { m_Rooms[i]->MarkEnemiesSpawned(); }
+    void       LockRoomDoors(int i)              { m_Rooms[i]->LockDoors(); }
 
     // 5×5 網格的世界間距（= 36 tiles × 48px）
     static constexpr float GRID_SPACING_X = 1728.0f;
@@ -62,6 +75,7 @@ private:
     std::vector<RoomType>                  m_RoomTypes;      // 與 m_Rooms 平行
     std::vector<std::unique_ptr<Corridor>> m_Corridors;
     int                                    m_CurrentRoomIdx = -1;
+    std::function<void(int)>               m_OnApproachEnemyRoom;
 
     // (gridRow, gridCol) → 世界中心座標
     static glm::vec2 GridToWorld(glm::ivec2 gridPos);

@@ -15,71 +15,30 @@
 void App::Start() {
     LOG_TRACE("Start");
 
-    // Step 3.2：生成多房間地城（隨機 seed）
-    const unsigned seed = static_cast<unsigned>(std::time(nullptr));
-    m_World.Generate(seed, 1);
+    m_Seed = static_cast<unsigned>(std::time(nullptr));
+    m_World.Generate(m_Seed, 1);
     m_World.AddToRenderer(m_Root);
 
-    // CollisionSystem 改為 World 版本
     CollisionSystem::SetWorld(&m_World);
 
-    // Step 2.2：子彈對象池加入渲染樹
     m_BulletManager.AddToRenderer(m_Root);
 
-    // 玩家：出生於 Spawn 房間中心
     m_Player = std::make_shared<Player>(&m_BulletManager);
     m_Player->SetWorldPos(m_World.GetSpawnPos());
     m_Root.AddChild(m_Player);
     m_Player->AddWeaponSpriteToRenderer(m_Root);
 
-    // 所有 BASIC 房間自動生成敵人
-    {
-        std::mt19937 rng(seed ^ 0xCAFEBABEu);
+    // EnemyManager 先初始化渲染/目標，敵人由懶生成填入
+    m_EnemyManager.AddToRenderer(m_Root);
+    m_EnemyManager.SetTarget(m_Player.get());
 
-        for (int i = 0; i < m_World.GetRoomCount(); ++i) {
-            if (m_World.GetRoomType(i) != RoomType::BASIC) continue;
+    // Step 3.5：接近觸發懶生成
+    m_World.SetOnApproachEnemyRoom([this](int idx) {
+        SpawnEnemiesInRoom(idx);
+    });
 
-            const glm::vec2 center = m_World.GetRoomOffset(i);
-            const int cols = m_World.GetRoomCols(i);
-            const int rows = m_World.GetRoomRows(i);
-
-            // 安全生成區域：距牆壁 3 格
-            const float hw = (cols * 0.5f - 3.0f) * TILE_SIZE;
-            const float hh = (rows * 0.5f - 4.0f) * TILE_SIZE;
-            std::uniform_real_distribution<float> dx(-hw, hw);
-            std::uniform_real_distribution<float> dy(-hh, hh);
-
-            // 敵人數量依房間大小
-            const int area = cols * rows;
-            int count;
-            if      (area < 300) count = 3 + static_cast<int>(rng() % 3);   // 3-5
-            else if (area < 450) count = 4 + static_cast<int>(rng() % 4);   // 4-7
-            else                 count = 6 + static_cast<int>(rng() % 4);   // 6-9
-
-            std::vector<Enemy*> ptrs;
-            ptrs.reserve(static_cast<size_t>(count));
-            for (int k = 0; k < count; ++k) {
-                std::shared_ptr<Enemy> e;
-                switch (rng() % 3) {
-                    case 0:  e = std::make_shared<PistolGoblin>(&m_BulletManager); break;
-                    case 1:  e = std::make_shared<SpearGoblin> (&m_BulletManager); break;
-                    default: e = std::make_shared<ArcherGoblin>(&m_BulletManager); break;
-                }
-                e->SetWorldPos({center.x + dx(rng), center.y + dy(rng)});
-                ptrs.push_back(e.get());
-                m_EnemyManager.AddEnemy(e);
-            }
-            m_World.AssignEnemiesToRoom(i, std::move(ptrs));
-        }
-
-        m_EnemyManager.AddToRenderer(m_Root);
-        m_EnemyManager.SetTarget(m_Player.get());
-    }
-
-    // HUD + MiniMap 最後加入（確保 Z 在最上層）
     m_HUD.AddToRenderer(m_Root);
 
-    // Step 3.4：迷你地圖
     {
         std::vector<glm::ivec2> gridPos;
         gridPos.reserve(m_World.GetRoomCount());
@@ -89,7 +48,6 @@ void App::Start() {
         m_MiniMap.AddToRenderer(m_Root);
     }
 
-    // Step 3.3：初始門狀態（Spawn 無敵人 → 立刻開啟，Room[1] 有敵人 → 保持關閉）
     m_World.Update(m_World.GetSpawnPos());
 
     m_CurrentState = State::UPDATE;
@@ -138,4 +96,42 @@ void App::Update() {
 
 void App::End() {
     LOG_TRACE("End");
+}
+
+void App::SpawnEnemiesInRoom(int roomIdx) {
+    if (m_World.AreEnemiesSpawned(roomIdx)) return;
+    m_World.MarkRoomEnemiesSpawned(roomIdx);
+
+    const glm::vec2 center = m_World.GetRoomOffset(roomIdx);
+    const int cols = m_World.GetRoomCols(roomIdx);
+    const int rows = m_World.GetRoomRows(roomIdx);
+
+    const float hw = (cols * 0.5f - 3.0f) * TILE_SIZE;
+    const float hh = (rows * 0.5f - 4.0f) * TILE_SIZE;
+
+    std::mt19937 rng(m_Seed ^ static_cast<unsigned>(roomIdx * 0x9E3779B9u));
+    std::uniform_real_distribution<float> dx(-hw, hw);
+    std::uniform_real_distribution<float> dy(-hh, hh);
+
+    const int area = cols * rows;
+    int count;
+    if      (area < 300) count = 3 + static_cast<int>(rng() % 3);
+    else if (area < 450) count = 4 + static_cast<int>(rng() % 4);
+    else                 count = 6 + static_cast<int>(rng() % 4);
+
+    std::vector<Enemy*> ptrs;
+    ptrs.reserve(static_cast<size_t>(count));
+    for (int k = 0; k < count; ++k) {
+        std::shared_ptr<Enemy> e;
+        switch (rng() % 3) {
+            case 0:  e = std::make_shared<PistolGoblin>(&m_BulletManager); break;
+            case 1:  e = std::make_shared<SpearGoblin> (&m_BulletManager); break;
+            default: e = std::make_shared<ArcherGoblin>(&m_BulletManager); break;
+        }
+        e->SetWorldPos({center.x + dx(rng), center.y + dy(rng)});
+        ptrs.push_back(e.get());
+        m_EnemyManager.AddEnemyLive(e);
+    }
+    m_World.AssignEnemiesToRoom(roomIdx, std::move(ptrs));
+    m_World.OpenRoomForEntry(roomIdx);
 }
