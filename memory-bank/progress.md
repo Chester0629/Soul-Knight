@@ -51,7 +51,8 @@
 | 3.1 多種房間模板 | ✅ 完成 | 5種模板(SPAWN/SMALL/MEDIUM/LARGE/WIDE)，RoomTemplate enum，m_GridPos/m_WorldOffset，啟動隨機選擇 |
 | 3.2 地城生成演算法 | ✅ 完成 | DungeonGenerator(5×5網格/隨機seed)、Corridor(水平/垂直)、World(多房間碰撞)；CollisionSystem改為World多房間版 |
 | 3.3 門的生成邏輯 | ✅ 完成 | DoorTile(開/關)、OpenDoor改用DoorTile、SideWallFaceTile(東西牆面w004)、Room.IsCleared/CheckAndOpenDoors、World.AssignEnemiesToRoom/Update；Y-Sort 公式統一改為 /64.0f（全地城無 clamp 問題） |
-| 3.4 迷你地圖 | ⬜ 待做 | 右中上角，已探索才顯示 |
+| 3.4 迷你地圖 | ✅ 完成 | 右上角 5×5 格子、已探索灰色、當前房間黃色游標；MiniMap class，Init(roomCount, gridPos) + Update(currentIdx, visited[]) |
+| 3.5 敵人懶生成 + 門控 | ✅ 完成 | 詳見下方技術決策；完整 commit 歷史於 master 分支 |
 
 ---
 
@@ -79,7 +80,39 @@
 
 ## 開發日誌
 
-### 2026-04-17
+### 2026-04-17（Step 3.4 + 3.5）
+- ✅ Step 3.4 迷你地圖完成
+  - `include/UI/MiniMap.hpp` + `src/UI/MiniMap.cpp`
+  - 5×5 格子映射，CELL_W=14, CELL_H=11，右上角固定座標
+  - `minimap_room.png`（灰色）、`minimap_cur.png`（黃色游標）
+  - `World::IsRoomVisited(i)` + `GetRoomGridPos(i)` 供 App 每幀更新
+
+- ✅ Step 3.5 敵人懶生成 + 門控完成
+  - 核心設計：所有門初始開啟（`OpenForEntry()`），玩家進入內部偵測區後生成敵人並關門，清場後永久開啟
+  - 敵人生成改為懶生成：App::SpawnEnemiesInRoom(idx) 由 World callback 觸發，不在 Start() 預生成
+  - EnemyManager::AddEnemyLive() 供懶生成後即時加入渲染樹
+
+- 🐛 **Bug 1：IsCleared() 空列表回傳 true → 敵人永遠不生成**
+  - 根本原因：`IsCleared()` 遍歷 m_Enemies，若列表為空則沒有 alive 的敵人，直接 return true
+  - 觸發情境：進入敵人房間前，m_Enemies 為空，`IsCleared()=true`，條件 `!room.IsCleared()` 為 false，整個 block（含 spawn callback）被跳過
+  - **為何會犯**：`IsCleared()` 的語意是「所有敵人已死亡」，但空列表也滿足此條件，在「尚未生成」的場景下是假正例
+  - 修正：在 `IsEnemyRoom()` block 中，先獨立判斷 `!AreEnemiesSpawned()` 觸發生成，再判斷 `!IsCleared()` 決定是否 LockDoors
+
+- 🐛 **Bug 2：從北門進入時玩家被門擠到外面**
+  - 根本原因：`GetRoomIndexAt` 使用完整房間 AABB，房間北邊界與北門 Tile（row 0~1）在同一位置。玩家跨越 AABB 邊界的瞬間觸發 `LockDoors()`，門變成牆（IsWall=true），碰撞系統立即把玩家推回邊界外
+  - **為何會犯**：房間尺寸含牆壁，AABB 邊界 = 牆的外緣 = 門 Tile 的位置，所以「偵測進入」和「踩在門上」是同一幀
+  - 修正：拆成兩個偵測區
+    - **標準 AABB**（原大小）：SetVisited + 迷你地圖，踏入邊界即更新
+    - **縮小 AABB**（每側向內 `2×TILE_SIZE = 96px`）：敵人生成 + LockDoors，確保玩家已穿過門口（row 2+ 以內）才觸發
+  - 新增 `m_InnerRoomIdx` 追蹤玩家是否進入內部偵測區（與 `m_CurrentRoomIdx` 分離）
+
+- 🐛 **Bug 3（早期設計）：接近觸發擠出問題**
+  - 原始設計：門預設關閉，接近到擴大 AABB 時觸發 OpenForEntry() 開門，讓玩家進入
+  - 問題：玩家從北邊接近時，擴大 AABB 過早觸發，門開啟但此時玩家仍在走廊，後續進入房間 AABB 又觸發 LockDoors，門關閉把玩家擠出
+  - **根本設計缺陷**：「接近觸發」和「進入觸發」兩個時機太接近，北門方向幾乎同時發生
+  - 改為：門預設開，移除接近觸發，改用「確實進入（縮小 AABB）」觸發，徹底消除時序衝突
+
+### 2026-04-17（Step 3.3 驗收）
 - ✅ Step 3.3 驗收通過（Z-Sort 最終修正）
   - 加入 `SideWallFaceTile`（東西門開口處 w004 牆面，固定 Z=0.5f）
   - `DoorTile` 開關皆使用 Y-Sort Z（m_BaseZ），解決 ww002 被 f101 覆蓋問題
@@ -227,6 +260,10 @@
 | 走廊實作 | 細長 Room（重用 Room 架構），無敵人，IsCleared()=true | ✅ 已定案 |
 | 房間切換觸發 | World 每幀比對玩家 WorldPos 與所有 Room AABB | ✅ 已定案 |
 | 迷你地圖渲染 | 每個 Room 對應一個 GameObject，SetVisible 控制顯示 | ✅ 已定案 |
+| 敵人生成時機 | **懶生成**：玩家進入縮小 AABB 才生成，不在 Start() 預生成 | ✅ 已定案（3.5）|
+| 門初始狀態 | **預設開**（OpenForEntry，不設 m_DoorsOpened）；進入後 LockDoors | ✅ 已定案（3.5）|
+| 房間進入偵測 | **雙層 AABB**：標準大小→SetVisited/地圖；縮小2格→生成+LockDoors | ✅ 已定案（3.5）|
+| IsCleared() 語意陷阱 | 空 m_Enemies 也回傳 true；生成前必須先查 AreEnemiesSpawned() | ✅ 已確認（3.5）|
 | Boss 衝刺方向 | 朝玩家當前位置（不限橫向） | ✅ 已定案 |
 | 狀態重置 | 各系統實作 Reset()，GameManager 統一呼叫 | ✅ 已定案 |
 | 角色差異設計 | Player 基類 + CharacterC01/C02/C03 子類，覆寫 ActivateSkill() | ✅ 已定案 |
