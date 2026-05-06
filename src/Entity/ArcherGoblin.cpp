@@ -20,9 +20,10 @@ void ArcherGoblin::UpdateAI(float dt) {
     case AiState::MOVE: {
         if (dist > 0.01f) {
             const glm::vec2 dir = glm::normalize(toPlayer);
-            if (dist < MIN_DIST)
-                TryMove(-dir, m_Speed, dt);
-            else if (dist > PREFERRED_DIST)
+            if (dist < MIN_DIST) {
+                const float ratio = 1.0f - dist / MIN_DIST;
+                TryMove(-dir, m_Speed * 0.5f * ratio, dt);
+            } else if (dist > PREFERRED_DIST)
                 TryMove(dir, m_Speed, dt);
         }
         // 進入射程且冷卻完成 → 開始瞄準
@@ -49,9 +50,10 @@ void ArcherGoblin::UpdateAI(float dt) {
     case AiState::COOLDOWN: {
         if (dist > 0.01f) {
             const glm::vec2 dir = glm::normalize(toPlayer);
-            if (dist < MIN_DIST)
-                TryMove(-dir, m_Speed, dt);
-            else if (dist > PREFERRED_DIST)
+            if (dist < MIN_DIST) {
+                const float ratio = 1.0f - dist / MIN_DIST;
+                TryMove(-dir, m_Speed * 0.5f * ratio, dt);
+            } else if (dist > PREFERRED_DIST)
                 TryMove(dir, m_Speed, dt);
         }
         if (m_AttackCooldown <= 0.0f)

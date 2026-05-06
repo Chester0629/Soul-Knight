@@ -11,6 +11,7 @@ set(SRC_FILES
     World/Camera.cpp
     World/DungeonGenerator.cpp
     World/Corridor.cpp
+    World/Portal.cpp
     World/World.cpp
     System/CollisionSystem.cpp
     Weapon/Bullet.cpp
@@ -31,6 +32,7 @@ set(INCLUDE_FILES
     World/Camera.hpp
     World/DungeonGenerator.hpp
     World/Corridor.hpp
+    World/Portal.hpp
     World/World.hpp
     System/CollisionSystem.hpp
     Weapon/Bullet.hpp
@@ -38,6 +40,7 @@ set(INCLUDE_FILES
     Weapon/Weapon.hpp
     UI/HUD.hpp
     UI/MiniMap.hpp
+    Core/LevelManager.hpp
 )
 
 set(TEST_FILES

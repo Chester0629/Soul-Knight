@@ -20,6 +20,8 @@ public:
     void AddToRenderer(Util::Renderer& renderer);
     void SetTarget(Player* player);
     void Update(float dt);
+    // 層切換：清除所有敵人（Renderer 須先 Reset 以確保 shared_ptr 完全釋放）
+    void ClearEnemies() { m_Enemies.clear(); }
 
     const std::vector<std::shared_ptr<Enemy>>& GetEnemies() const { return m_Enemies; }
     bool AllDead() const;

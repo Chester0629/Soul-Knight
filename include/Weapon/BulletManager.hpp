@@ -30,6 +30,9 @@ public:
     // 停用子彈（碰牆、碰到目標、壽命結束時呼叫）
     void Deactivate(Bullet* b);
 
+    // 層切換：停用所有進行中的子彈
+    void DeactivateAll();
+
     // 將全部 100 顆 Bullet GameObject 加入渲染樹（App::Start 呼叫一次）
     void AddToRenderer(Util::Renderer& root);
 

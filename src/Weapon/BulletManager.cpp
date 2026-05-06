@@ -39,6 +39,11 @@ void BulletManager::Spawn(glm::vec2 worldPos, glm::vec2 dir, float speed,
     }
 }
 
+void BulletManager::DeactivateAll() {
+    for (auto& b : m_Bullets)
+        if (b->m_Active) Deactivate(b.get());
+}
+
 void BulletManager::Deactivate(Bullet* b) {
     b->m_Active   = false;
     b->m_Lifetime = -1.0f;

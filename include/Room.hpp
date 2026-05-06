@@ -75,8 +75,10 @@ public:
     bool AreDoorsOpen() const { return m_DoorsOpened; } // 查詢門目前是否開啟
     void DebugCloseDoors();                              // 強制關閉（Debug 用，繞過清場守衛）
 
-    void SetVisited()    { m_Visited = true; }
-    bool IsVisited() const { return m_Visited; }
+    void SetVisited()      { m_Visited  = true; }
+    bool IsVisited()  const { return m_Visited;  }
+    void SetRevealed()     { m_Revealed = true; }
+    bool IsRevealed() const { return m_Revealed; }
 
     // 懶生成 + 門控制（Step 3.5）
     void SetIsEnemyRoom(bool v)    { m_IsEnemyRoom = v; }
@@ -120,6 +122,7 @@ private:
     bool                                   m_DoorsOpened   = false;
     bool                                   m_CombatStarted  = false;
     bool                                   m_Visited        = false;
+    bool                                   m_Revealed       = false;
     bool                                   m_IsEnemyRoom    = false;
     bool                                   m_EnemiesSpawned = false;
 

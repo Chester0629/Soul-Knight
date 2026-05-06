@@ -18,6 +18,12 @@ void World::Generate(unsigned seed, int floorIndex) {
     m_Rooms.clear();
     m_RoomTypes.clear();
     m_Corridors.clear();
+    m_Connections.clear();
+    m_Portal.reset();
+    m_PortalRoomIdx   = -1;
+    m_PortalTriggered = false;
+    m_CurrentRoomIdx  = -1;
+    m_InnerRoomIdx    = -1;
 
     const DungeonLayout layout = DungeonGenerator::Generate(seed, floorIndex);
 
@@ -95,11 +101,22 @@ void World::Generate(unsigned seed, int floorIndex) {
         m_Corridors.push_back(
             std::make_unique<Corridor>(corrCenter, corrCols, corrRows, isHorizontal)
         );
+        m_Connections.push_back({conn.fromIdx, conn.toIdx, isHorizontal});
     }
 
     // 所有門初始為開（讓玩家可自由進入）；LockDoors() 在進房時觸發
     for (auto& room : m_Rooms)
         room->OpenForEntry();
+
+    // 建立傳送門（PORTAL 房間中心，Boss 層無傳送門）
+    for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
+        if (m_RoomTypes[i] == RoomType::PORTAL) {
+            m_PortalRoomIdx = i;
+            m_Portal = std::make_shared<Portal>();
+            m_Portal->SetWorldPos(m_Rooms[i]->GetWorldOffset());
+            break;
+        }
+    }
 }
 
 // ── Renderer 整合 ─────────────────────────────────────────────────────────────
@@ -108,6 +125,8 @@ void World::AddToRenderer(Util::Renderer& renderer) {
         room->AddToRenderer(renderer);
     for (auto& corr : m_Corridors)
         corr->AddToRenderer(renderer);
+    if (m_Portal)
+        renderer.AddChild(m_Portal);
 }
 
 // ── 每幀更新 ──────────────────────────────────────────────────────────────────
@@ -116,6 +135,8 @@ void World::SyncTransforms(glm::vec2 cameraPos) {
         room->SyncTransforms(cameraPos);
     for (auto& corr : m_Corridors)
         corr->SyncTransforms(cameraPos);
+    if (m_Portal)
+        m_Portal->SyncTransform(cameraPos);
 }
 
 // ── Step 3.3：敵人指派 + 門狀態更新 ─────────────────────────────────────────
@@ -145,13 +166,23 @@ static int GetRoomIndexAt(const std::vector<std::unique_ptr<Room>>& rooms,
     return -1;
 }
 
-void World::Update(glm::vec2 playerPos) {
+void World::Update(glm::vec2 playerPos, bool interact) {
     // 標準 AABB：用於迷你地圖 / SetVisited
     const int newRoomIdx = GetRoomIndexAt(m_Rooms, playerPos);
     if (newRoomIdx != m_CurrentRoomIdx) {
+        const int prevRoomIdx = m_CurrentRoomIdx;
         m_CurrentRoomIdx = newRoomIdx;
         if (newRoomIdx >= 0)
             m_Rooms[newRoomIdx]->SetVisited();
+        // 玩家剛進入走廊（房間 → -1）→ 揭露此房間所有相鄰房間
+        if (newRoomIdx == -1 && prevRoomIdx >= 0) {
+            for (const auto& conn : m_Connections) {
+                if (conn.fromIdx == prevRoomIdx)
+                    m_Rooms[conn.toIdx]->SetRevealed();
+                else if (conn.toIdx == prevRoomIdx)
+                    m_Rooms[conn.fromIdx]->SetRevealed();
+            }
+        }
     }
 
     // 縮小 AABB（向內 2 格）：確保玩家已穿過門口才觸發敵人生成與關門
@@ -172,12 +203,33 @@ void World::Update(glm::vec2 playerPos) {
     // 每幀檢查：已開戰且敵人全清 → 開門
     for (auto& room : m_Rooms)
         room->CheckAndOpenDoors();
+
+    // 傳送門：全部 BASIC 房間清空 → 激活；玩家踏入 → 觸發
+    if (m_Portal) {
+        if (!m_Portal->IsActive() && AllBasicRoomsCleared())
+            m_Portal->Activate();
+        if (m_Portal->IsActive() && !m_PortalTriggered
+            && m_OnPortalEntered && interact && m_Portal->ContainsPlayer(playerPos)) {
+            m_PortalTriggered = true;
+            m_OnPortalEntered();
+        }
+    }
 }
 
 // ── 玩家出生位置（Spawn 房間中心）────────────────────────────────────────────
 glm::vec2 World::GetSpawnPos() const {
     if (!m_Rooms.empty()) return m_Rooms[0]->GetWorldOffset();
     return {0.0f, 0.0f};
+}
+
+// ── 傳送門啟用條件：所有 BASIC 房間均已生成敵人且全部死亡 ─────────────────────
+bool World::AllBasicRoomsCleared() const {
+    for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
+        if (m_RoomTypes[i] != RoomType::BASIC) continue;
+        if (!m_Rooms[i]->AreEnemiesSpawned()) return false;
+        if (!m_Rooms[i]->IsCleared())         return false;
+    }
+    return true;
 }
 
 // ── 碰撞輔助：世界座標 → Tile 索引（含房間偏移）──────────────────────────────

@@ -15,42 +15,74 @@
 void App::Start() {
     LOG_TRACE("Start");
 
-    m_Seed = static_cast<unsigned>(std::time(nullptr));
-    m_World.Generate(m_Seed, 1);
+    m_BaseSeed = static_cast<unsigned>(std::time(nullptr));
+    m_LevelManager.Reset();
+    m_Player = std::make_shared<Player>(&m_BulletManager);
+    LoadFloor();
+
+    m_CurrentState = State::UPDATE;
+}
+
+void App::LoadFloor() {
+    m_Seed = m_BaseSeed ^ (static_cast<unsigned>(m_LevelManager.GetFloor()) * 0x9E3779B9u);
+
+    // 重置渲染樹（釋放舊 children shared_ptr；m_Root 位址穩定，EnemyManager 指標仍有效）
+    m_Root = Util::Renderer();
+    m_EnemyManager.ClearEnemies();
+    m_BulletManager.DeactivateAll();
+
+    m_World.Generate(m_Seed, m_LevelManager.GetFloor());
     m_World.AddToRenderer(m_Root);
 
     CollisionSystem::SetWorld(&m_World);
 
     m_BulletManager.AddToRenderer(m_Root);
 
-    m_Player = std::make_shared<Player>(&m_BulletManager);
     m_Player->SetWorldPos(m_World.GetSpawnPos());
     m_Root.AddChild(m_Player);
     m_Player->AddWeaponSpriteToRenderer(m_Root);
 
-    // EnemyManager 先初始化渲染/目標，敵人由懶生成填入
     m_EnemyManager.AddToRenderer(m_Root);
     m_EnemyManager.SetTarget(m_Player.get());
 
-    // Step 3.5：進房觸發懶生成
     m_World.SetOnEnterEnemyRoom([this](int idx) {
         SpawnEnemiesInRoom(idx);
+    });
+
+    m_World.SetOnPortalEntered([this]() {
+        m_LevelManager.NextFloor();
+        if (m_LevelManager.IsComplete())
+            m_CurrentState = State::END;
+        else
+            LoadFloor();
     });
 
     m_HUD.AddToRenderer(m_Root);
 
     {
-        std::vector<glm::ivec2> gridPos;
-        gridPos.reserve(m_World.GetRoomCount());
-        for (int i = 0; i < m_World.GetRoomCount(); ++i)
+        const int n = m_World.GetRoomCount();
+        std::vector<glm::ivec2>        gridPos;
+        std::vector<MiniMapRoomType>   mmTypes;
+        std::vector<MiniMap::ConnInfo> mmConns;
+        gridPos.reserve(n);
+        mmTypes.reserve(n);
+
+        for (int i = 0; i < n; ++i) {
             gridPos.push_back(m_World.GetRoomGridPos(i));
-        m_MiniMap.Init(m_World.GetRoomCount(), gridPos);
+            switch (m_World.GetRoomType(i)) {
+                case RoomType::SPAWN:  mmTypes.push_back(MiniMapRoomType::SPAWN);  break;
+                case RoomType::PORTAL: mmTypes.push_back(MiniMapRoomType::PORTAL); break;
+                default:               mmTypes.push_back(MiniMapRoomType::NORMAL); break;
+            }
+        }
+        for (const auto& c : m_World.GetConnections())
+            mmConns.push_back({c.fromIdx, c.toIdx, c.isHorizontal});
+
+        m_MiniMap.Init(n, gridPos, mmTypes, mmConns);
         m_MiniMap.AddToRenderer(m_Root);
     }
 
     m_World.Update(m_World.GetSpawnPos());
-
-    m_CurrentState = State::UPDATE;
 }
 
 void App::Update() {
@@ -58,7 +90,8 @@ void App::Update() {
 
     m_Player->Update(dt);
     Camera::Update(m_Player->GetWorldPos());
-    m_World.Update(m_Player->GetWorldPos());   // 必須在 SyncRender 前，確保 ZOffset 正確
+    m_World.Update(m_Player->GetWorldPos(),
+                   Util::Input::IsKeyDown(Util::Keycode::E));  // E 鍵互動傳送門
     m_Player->SyncRender(Camera::GetPosition());
     m_EnemyManager.Update(dt);
     m_BulletManager.Update(dt, Camera::GetPosition(), m_Player.get(), &m_EnemyManager);
@@ -69,11 +102,15 @@ void App::Update() {
                  m_Player->GetEnergy(), m_Player->GetMaxEnergy());
 
     {
-        std::vector<bool> visited;
-        visited.reserve(m_World.GetRoomCount());
-        for (int i = 0; i < m_World.GetRoomCount(); ++i)
+        const int n = m_World.GetRoomCount();
+        std::vector<bool> visited, revealed;
+        visited.reserve(n);
+        revealed.reserve(n);
+        for (int i = 0; i < n; ++i) {
             visited.push_back(m_World.IsRoomVisited(i));
-        m_MiniMap.Update(m_World.GetCurrentRoomIdx(), visited);
+            revealed.push_back(m_World.IsRoomRevealed(i));
+        }
+        m_MiniMap.Update(m_World.GetCurrentRoomIdx(), visited, revealed);
     }
 
     m_Root.Update();
@@ -86,6 +123,17 @@ void App::Update() {
     // Debug：F 鍵切換所有房間的門（Step 3.3 驗收用）
     if (Util::Input::IsKeyDown(Util::Keycode::F)) {
         m_World.DebugToggleDoors();
+    }
+
+    // Debug：N 鍵切換下一層
+    if (Util::Input::IsKeyDown(Util::Keycode::N)) {
+        m_LevelManager.NextFloor();
+        if (m_LevelManager.IsComplete()) {
+            m_CurrentState = State::END;
+        } else {
+            LoadFloor();
+        }
+        return;
     }
 
     if (Util::Input::IsKeyUp(Util::Keycode::ESCAPE) ||

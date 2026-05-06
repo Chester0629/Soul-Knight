@@ -1,13 +1,13 @@
 # progress.md — 開發進度追蹤
 > Soul Knight (OOP 2025 期末專案)
-> 版本: 1.4 | 最後更新: 2026-03-21
+> 版本: 1.6 | 最後更新: 2026-05-06
 
 ---
 
 ## 當前狀態
 
-- **目前里程碑**: M3 進行中
-- **下一步**: **M3 Step 3.4 迷你地圖**
+- **目前里程碑**: M4 Step 4.1 + 4.2 完成
+- **下一步**: **M4 Step 4.3 Boss**
 
 ---
 
@@ -51,7 +51,7 @@
 | 3.1 多種房間模板 | ✅ 完成 | 5種模板(SPAWN/SMALL/MEDIUM/LARGE/WIDE)，RoomTemplate enum，m_GridPos/m_WorldOffset，啟動隨機選擇 |
 | 3.2 地城生成演算法 | ✅ 完成 | DungeonGenerator(5×5網格/隨機seed)、Corridor(水平/垂直)、World(多房間碰撞)；CollisionSystem改為World多房間版 |
 | 3.3 門的生成邏輯 | ✅ 完成 | DoorTile(開/關)、OpenDoor改用DoorTile、SideWallFaceTile(東西牆面w004)、Room.IsCleared/CheckAndOpenDoors、World.AssignEnemiesToRoom/Update；Y-Sort 公式統一改為 /64.0f（全地城無 clamp 問題） |
-| 3.4 迷你地圖 | ✅ 完成 | 右上角 5×5 格子、已探索灰色、當前房間黃色游標；MiniMap class，Init(roomCount, gridPos) + Update(currentIdx, visited[]) |
+| 3.4 迷你地圖 | ✅ 完成 | 右上角 5×5 格子、漸進揭露（走廊觸發）、深灰/淺灰/游標；MiniMap class，Update(currentIdx, visited[], revealed[]) |
 | 3.5 敵人懶生成 + 門控 | ✅ 完成 | 詳見下方技術決策；完整 commit 歷史於 master 分支 |
 
 ---
@@ -60,8 +60,8 @@
 
 | Step | 狀態 | 說明 |
 |------|------|------|
-| 4.1 LevelManager（分層） | ⬜ 待做 | 4 層普通 + 1 層 Boss（共 5 層） |
-| 4.2 傳送陣 | ⬜ 待做 | effect04_5-12.png，所有房間清空後出現 |
+| 4.1 LevelManager（分層） | ✅ 完成 | LevelManager(1~5層)、LoadFloor(seed XOR)、N鍵debug切層、App重構 |
+| 4.2 傳送陣 | ✅ 完成 | Portal(effect04_5~12)、AllBasicRoomsCleared()激活、E鍵互動進下一層 |
 | 4.3 Boss | ⬜ 待做 | boss08，Phase 1 扇形彈幕 + Phase 2 衝刺 |
 | 4.4 Roguelike 重開機制 | ⬜ 待做 | 死亡→GameOver→主選單，完整重置 |
 
@@ -79,6 +79,50 @@
 ---
 
 ## 開發日誌
+
+### 2026-05-06（Step 4.1 + 4.2 驗收 + 編譯環境修正）
+
+- ✅ **Step 4.1 LevelManager 驗收**
+  - 前次 session 已完成實作：`include/Core/LevelManager.hpp`（header-only），`App` 整合 `LoadFloor()`
+  - `LoadFloor()` 流程：seed = BaseSeed XOR (floor×0x9E3779B9)，重置 Renderer/Enemies/Bullets，重生成地城
+  - `N` 鍵 debug 切層，`LevelManager::IsComplete()` → `State::END`
+  - DungeonGenerator: floor 5 生成 BOSS 房間（非 PORTAL）
+
+- ✅ **Step 4.2 傳送陣驗收**
+  - `Portal` 類別：effect04_5~12.png 8幀動畫，TRIGGER_RADIUS=64px
+  - `World::AllBasicRoomsCleared()` → Portal.Activate()
+  - `E` 鍵（interact）+ ContainsPlayer() → `m_OnPortalEntered` callback → `NextFloor()` + `LoadFloor()`
+  - Boss 層（floor 5）無 Portal 節點，玩家等 Boss 死亡觸發 Victory
+
+- 🔧 **MinGW 編譯環境問題（PATH 缺少 libexec）**
+  - 症狀：`ninja` 全部 FAILED，但 g++ 無任何 stderr 輸出（exit 1）
+  - 根因：g++ 需要 `cc1plus.exe`，路徑在 `libexec/gcc/x86_64-w64-mingw32/13.1.0/`，未加入 PATH
+  - 修正：於 bash 加入 `/c/Program Files/JetBrains/CLion 2025.2.3/bin/mingw/libexec/gcc/x86_64-w64-mingw32/13.1.0` 至 PATH 後編譯成功
+  - **CLion 直接建置不受影響**（CLion 自動設定正確 PATH）
+
+### 2026-04-24（迷你地圖揭露機制重構 + 遠程敵人 AI 修正）
+
+- 🔧 **迷你地圖揭露邏輯重構**
+  - 舊設計：`adjRev`（相鄰房間自動揭露）→ 所有非相鄰未訪問房間被隱藏，且已訪問房間全顯示淺灰
+  - 新設計：漸進霧戰揭露
+    - **隱藏**：尚未揭露（`!visited && !revealed`）
+    - **深灰**：已揭露但未訪問（`revealed && !visited`）OR 當前房間
+    - **淺灰**：已訪問非當前房間
+  - **揭露觸發**：`World::Update` 偵測 `m_CurrentRoomIdx` 從房間轉 -1（玩家進走廊），揭露該房間所有相鄰房間
+  - 新增 `Room::m_Revealed` / `SetRevealed()` / `IsRevealed()`
+  - 新增 `World::IsRoomRevealed(int i)`
+  - `MiniMap::Update` 簽名加入 `revealed[]` 參數
+  - `App::Update` 同時傳 `visited[]` + `revealed[]`
+  - 走廊：任一端點已 visited 即顯示
+
+- 🔧 **遠程敵人後退 AI 修正（PistolGoblin / ArcherGoblin）**
+  - 舊行為：玩家進入 `MIN_DIST` 立即以全速 `m_Speed`（150px/s）後退，造成「橡皮筋推開」
+  - 修正：後退速度與入侵深度成正比
+    ```cpp
+    ratio = 1.0f - dist / MIN_DIST;   // 0=邊界, 1=完全重疊
+    TryMove(-dir, m_Speed * 0.5f * ratio, dt);  // 最高 75px/s
+    ```
+  - 玩家 300px/s 任何時候都能追上（淨逼近速 ≥ 225px/s）
 
 ### 2026-04-17（Step 3.4 + 3.5）
 - ✅ Step 3.4 迷你地圖完成
@@ -264,11 +308,13 @@
 | 門初始狀態 | **預設開**（OpenForEntry，不設 m_DoorsOpened）；進入後 LockDoors | ✅ 已定案（3.5）|
 | 房間進入偵測 | **雙層 AABB**：標準大小→SetVisited/地圖；縮小2格→生成+LockDoors | ✅ 已定案（3.5）|
 | IsCleared() 語意陷阱 | 空 m_Enemies 也回傳 true；生成前必須先查 AreEnemiesSpawned() | ✅ 已確認（3.5）|
+| 迷你地圖揭露機制 | 走廊觸發：`currentRoomIdx` 轉 -1 時揭露相鄰房間；Room 新增 `m_Revealed/SetRevealed/IsRevealed` | ✅ 已定案（2026-04-24）|
+| 遠程敵人後退速度 | 比例式後退：`m_Speed * 0.5f * (1-dist/MIN_DIST)`，最高 75px/s，避免推開感 | ✅ 已定案（2026-04-24）|
 | Boss 衝刺方向 | 朝玩家當前位置（不限橫向） | ✅ 已定案 |
 | 狀態重置 | 各系統實作 Reset()，GameManager 統一呼叫 | ✅ 已定案 |
 | 角色差異設計 | Player 基類 + CharacterC01/C02/C03 子類，覆寫 ActivateSkill() | ✅ 已定案 |
 | 升級資源 | 跨局保留貨幣，選角前在升級室消費；每局死亡不歸零 | ✅ 已定案 |
-| 地城生成演算法 | 樹狀/網狀，6–9房間，走廊銜接 | ⬜ 待 M3 實作 |
+| 地城生成演算法 | 樹狀/網狀，6–9房間，走廊銜接 | ✅ 完成（Step 3.2）|
 | Tile 效能優化 | M1 先用一般 GameObject；卡頓時 M3 後合併大 Texture | ⬜ 待觀察 |
 | 音效 | 需要，PTSD 支援，M4/M5 實作 | ⬜ 待做 |
 | Boss 攻擊具體數值 | Phase1 扇形 5 發每 2.5s，Phase2 衝刺觸發 HP≤50% | ⬜ 待 M4 細化 |

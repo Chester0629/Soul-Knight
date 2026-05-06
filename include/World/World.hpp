@@ -3,6 +3,7 @@
 #include "Room.hpp"
 #include "World/Corridor.hpp"
 #include "World/DungeonGenerator.hpp"
+#include "World/Portal.hpp"
 #include "Util/Renderer.hpp"
 
 #include <functional>
@@ -25,12 +26,18 @@ public:
     void SyncTransforms(glm::vec2 cameraPos);
 
     // Step 3.3：每幀驅動門的狀態（進房關門、敵人全清 → 開門）
-    void Update(glm::vec2 playerPos);
+    void Update(glm::vec2 playerPos, bool interact = false);
 
     // Step 3.5：懶生成 callback（App 設定，玩家進入敵人房間時呼叫）
     void SetOnEnterEnemyRoom(std::function<void(int)> cb) {
         m_OnEnterEnemyRoom = std::move(cb);
     }
+
+    // Step 4.2：傳送門 callback（所有敵人房間清空後傳送門出現；玩家進入時觸發）
+    void SetOnPortalEntered(std::function<void()> cb) {
+        m_OnPortalEntered = std::move(cb);
+    }
+    bool AllBasicRoomsCleared() const;
 
     // Step 3.3：將敵人指派給指定房間（非擁有式）
     void AssignEnemiesToRoom(int roomIdx, std::vector<Enemy*> enemies);
@@ -49,10 +56,18 @@ public:
     void DebugToggleDoors();
 
     // Step 3.4 迷你地圖
-    int            GetCurrentRoomIdx()  const { return m_CurrentRoomIdx; }
-    int            GetRoomCount()       const { return static_cast<int>(m_Rooms.size()); }
-    glm::ivec2     GetRoomGridPos(int i) const { return m_Rooms[i]->GetGridPos(); }
-    bool           IsRoomVisited(int i)  const { return m_Rooms[i]->IsVisited(); }
+    struct RoomConnection {
+        int  fromIdx;
+        int  toIdx;
+        bool isHorizontal;  // true = E/W, false = N/S
+    };
+
+    int            GetCurrentRoomIdx()   const { return m_CurrentRoomIdx; }
+    int            GetRoomCount()        const { return static_cast<int>(m_Rooms.size()); }
+    glm::ivec2     GetRoomGridPos(int i)  const { return m_Rooms[i]->GetGridPos(); }
+    bool           IsRoomVisited(int i)   const { return m_Rooms[i]->IsVisited(); }
+    bool           IsRoomRevealed(int i)  const { return m_Rooms[i]->IsRevealed(); }
+    const std::vector<RoomConnection>& GetConnections() const { return m_Connections; }
 
     // 敵人生成輔助
     RoomType   GetRoomType(int i)          const { return m_RoomTypes[i]; }
@@ -71,9 +86,15 @@ private:
     std::vector<std::unique_ptr<Room>>     m_Rooms;
     std::vector<RoomType>                  m_RoomTypes;      // 與 m_Rooms 平行
     std::vector<std::unique_ptr<Corridor>> m_Corridors;
+    std::vector<RoomConnection>            m_Connections;    // 走廊連接資訊（供迷你地圖）
     int                                    m_CurrentRoomIdx = -1;
     int                                    m_InnerRoomIdx   = -1;  // 縮小 AABB 用於關門觸發
     std::function<void(int)>               m_OnEnterEnemyRoom;
+
+    std::shared_ptr<Portal>              m_Portal;
+    int                                  m_PortalRoomIdx   = -1;
+    bool                                 m_PortalTriggered = false;
+    std::function<void()>                m_OnPortalEntered;
 
     // (gridRow, gridCol) → 世界中心座標
     static glm::vec2 GridToWorld(glm::ivec2 gridPos);

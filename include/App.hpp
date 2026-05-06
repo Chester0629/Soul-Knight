@@ -2,6 +2,7 @@
 
 #include "pch.hpp" // IWYU pragma: export
 
+#include "Core/LevelManager.hpp"
 #include "Entity/EnemyManager.hpp"
 #include "Entity/Player.hpp"
 #include "UI/HUD.hpp"
@@ -28,7 +29,7 @@ private:
     State m_CurrentState = State::START;
 
     Util::Renderer m_Root;
-    World          m_World;          // Step 3.2+：多房間地城世界
+    World          m_World;
 
     // BulletManager 必須在 Player/EnemyManager 前宣告，確保生命週期
     BulletManager            m_BulletManager;
@@ -37,7 +38,11 @@ private:
     HUD                      m_HUD;
     MiniMap                  m_MiniMap;
 
-    unsigned m_Seed = 0;
+    LevelManager m_LevelManager;
+    unsigned     m_BaseSeed  = 0;  // 遊戲啟動時的隨機種子（固定不變）
+    unsigned     m_Seed      = 0;  // 當前層的種子（= BaseSeed XOR floor）
 
+    // 重建當前層的所有遊戲物件並重新加入 Renderer
+    void LoadFloor();
     void SpawnEnemiesInRoom(int roomIdx);
 };

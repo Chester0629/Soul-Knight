@@ -16,7 +16,9 @@ void PistolGoblin::UpdateAI(float dt) {
     if (dist > 0.01f) {
         const glm::vec2 dir = glm::normalize(toPlayer);
         if (dist < MIN_DIST) {
-            TryMove(-dir, m_Speed, dt);        // 後退
+            // 後退速度隨入侵深度線性增加，避免「強制推開」感
+            const float ratio = 1.0f - dist / MIN_DIST;   // 0=邊界, 1=完全重疊
+            TryMove(-dir, m_Speed * 0.5f * ratio, dt);
         } else if (dist > PREFERRED_DIST) {
             TryMove(dir, m_Speed * 0.8f, dt);  // 緩慢靠近（不衝向玩家）
         }
