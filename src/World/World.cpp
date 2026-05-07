@@ -24,15 +24,20 @@ void World::Generate(unsigned seed, int floorIndex) {
     m_PortalTriggered = false;
     m_CurrentRoomIdx  = -1;
     m_InnerRoomIdx    = -1;
+    m_BossRoomIdx     = -1;
+    m_BossDefeated    = false;
 
     const DungeonLayout layout = DungeonGenerator::Generate(seed, floorIndex);
 
     // 1. 建立所有 Room（帶 worldOffset）
-    for (const auto& node : layout.rooms) {
+    for (int i = 0; i < static_cast<int>(layout.rooms.size()); ++i) {
+        const auto& node = layout.rooms[i];
         glm::vec2 offset = GridToWorld(node.gridPos);
         auto room = std::make_unique<Room>(node.tmpl, node.gridPos, offset);
-        if (node.type == RoomType::BASIC)
+        if (node.type == RoomType::BASIC || node.type == RoomType::BOSS)
             room->SetIsEnemyRoom(true);
+        if (node.type == RoomType::BOSS)
+            m_BossRoomIdx = i;
         m_Rooms.push_back(std::move(room));
         m_RoomTypes.push_back(node.type);
     }
@@ -114,6 +119,7 @@ void World::Generate(unsigned seed, int floorIndex) {
             m_PortalRoomIdx = i;
             m_Portal = std::make_shared<Portal>();
             m_Portal->SetWorldPos(m_Rooms[i]->GetWorldOffset());
+            m_Portal->Activate();  // 立即啟動，無需清場
             break;
         }
     }
@@ -204,14 +210,19 @@ void World::Update(glm::vec2 playerPos, bool interact) {
     for (auto& room : m_Rooms)
         room->CheckAndOpenDoors();
 
-    // 傳送門：全部 BASIC 房間清空 → 激活；玩家踏入 → 觸發
-    if (m_Portal) {
-        if (!m_Portal->IsActive() && AllBasicRoomsCleared())
-            m_Portal->Activate();
-        if (m_Portal->IsActive() && !m_PortalTriggered
-            && m_OnPortalEntered && interact && m_Portal->ContainsPlayer(playerPos)) {
-            m_PortalTriggered = true;
-            m_OnPortalEntered();
+    // 傳送門：玩家走到傳送門並按 E 觸發
+    if (m_Portal && !m_PortalTriggered
+        && m_OnPortalEntered && interact && m_Portal->ContainsPlayer(playerPos)) {
+        m_PortalTriggered = true;
+        m_OnPortalEntered();
+    }
+
+    // Boss 房間：敵人全清 → 觸發 Boss 擊敗 callback
+    if (!m_BossDefeated && m_BossRoomIdx >= 0 && m_OnBossDefeated) {
+        const Room& bossRoom = *m_Rooms[m_BossRoomIdx];
+        if (bossRoom.AreEnemiesSpawned() && bossRoom.IsCleared()) {
+            m_BossDefeated = true;
+            m_OnBossDefeated();
         }
     }
 }

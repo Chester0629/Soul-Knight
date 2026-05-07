@@ -4,6 +4,7 @@ set(SRC_FILES
     Room.cpp
     Entity/Player.cpp
     Entity/Enemy.cpp
+    Entity/Boss.cpp
     Entity/PistolGoblin.cpp
     Entity/SpearGoblin.cpp
     Entity/ArcherGoblin.cpp
@@ -28,6 +29,7 @@ set(INCLUDE_FILES
     Entity/Entity.hpp
     Entity/Player.hpp
     Entity/Enemy.hpp
+    Entity/Boss.hpp
     Entity/EnemyManager.hpp
     World/Camera.hpp
     World/DungeonGenerator.hpp

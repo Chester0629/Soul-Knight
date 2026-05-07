@@ -33,11 +33,16 @@ public:
         m_OnEnterEnemyRoom = std::move(cb);
     }
 
-    // Step 4.2：傳送門 callback（所有敵人房間清空後傳送門出現；玩家進入時觸發）
+    // Step 4.2：傳送門 callback（玩家走到傳送門並按 E 時觸發）
     void SetOnPortalEntered(std::function<void()> cb) {
         m_OnPortalEntered = std::move(cb);
     }
     bool AllBasicRoomsCleared() const;
+
+    // Step 4.3：Boss 擊敗 callback
+    void SetOnBossDefeated(std::function<void()> cb) {
+        m_OnBossDefeated = std::move(cb);
+    }
 
     // Step 3.3：將敵人指派給指定房間（非擁有式）
     void AssignEnemiesToRoom(int roomIdx, std::vector<Enemy*> enemies);
@@ -95,6 +100,10 @@ private:
     int                                  m_PortalRoomIdx   = -1;
     bool                                 m_PortalTriggered = false;
     std::function<void()>                m_OnPortalEntered;
+
+    int                                  m_BossRoomIdx  = -1;
+    bool                                 m_BossDefeated = false;
+    std::function<void()>                m_OnBossDefeated;
 
     // (gridRow, gridCol) → 世界中心座標
     static glm::vec2 GridToWorld(glm::ivec2 gridPos);

@@ -1,5 +1,6 @@
 #include "App.hpp"
 
+#include "Entity/Boss.hpp"
 #include "Entity/Enemy.hpp"
 #include "System/CollisionSystem.hpp"
 #include "Util/Input.hpp"
@@ -55,6 +56,11 @@ void App::LoadFloor() {
             m_CurrentState = State::END;
         else
             LoadFloor();
+    });
+
+    m_World.SetOnBossDefeated([this]() {
+        m_LevelManager.NextFloor();
+        m_CurrentState = State::END;
     });
 
     m_HUD.AddToRenderer(m_Root);
@@ -151,6 +157,15 @@ void App::SpawnEnemiesInRoom(int roomIdx) {
     m_World.MarkRoomEnemiesSpawned(roomIdx);
 
     const glm::vec2 center = m_World.GetRoomOffset(roomIdx);
+
+    if (m_World.GetRoomType(roomIdx) == RoomType::BOSS) {
+        auto boss = std::make_shared<Boss>(&m_BulletManager);
+        boss->SetWorldPos(center);
+        m_EnemyManager.AddEnemyLive(boss);
+        m_World.AssignEnemiesToRoom(roomIdx, {boss.get()});
+        return;
+    }
+
     const int cols = m_World.GetRoomCols(roomIdx);
     const int rows = m_World.GetRoomRows(roomIdx);
 
