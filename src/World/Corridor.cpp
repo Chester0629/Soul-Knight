@@ -131,6 +131,13 @@ void Corridor::AddToRenderer(Util::Renderer& renderer) {
         renderer.AddChild(t);
 }
 
+void Corridor::RemoveFromRenderer(Util::Renderer& renderer) {
+    for (auto& row : m_TileMap)
+        for (auto& tile : row)
+            if (tile) renderer.RemoveChild(tile);
+    for (auto& t : m_BottomFill) renderer.RemoveChild(t);
+}
+
 // ── 每幀更新 ──────────────────────────────────────────────────────────────────
 void Corridor::SyncTransforms(glm::vec2 cameraPos) {
     for (int r = 0; r < m_Rows; r++)

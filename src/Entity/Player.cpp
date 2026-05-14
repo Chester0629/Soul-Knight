@@ -59,6 +59,10 @@ void Player::AddWeaponSpriteToRenderer(Util::Renderer& root) {
     root.AddChild(m_WeaponSprite);
 }
 
+void Player::RemoveWeaponSpriteFromRenderer(Util::Renderer& root) {
+    root.RemoveChild(m_WeaponSprite);
+}
+
 void Player::HandleInput(float dt) {
     glm::vec2 dir = {0.0f, 0.0f};
 

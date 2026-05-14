@@ -25,6 +25,7 @@ public:
     Corridor(glm::vec2 centerPos, int cols, int rows, bool isHorizontal);
 
     void AddToRenderer(Util::Renderer& renderer);
+    void RemoveFromRenderer(Util::Renderer& renderer);
     void SyncTransforms(glm::vec2 cameraPos);
 
     // 碰撞介面（供 World 使用）

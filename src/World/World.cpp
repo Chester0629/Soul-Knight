@@ -25,7 +25,7 @@ void World::Generate(unsigned seed, int floorIndex) {
     for (const auto& node : layout.rooms) {
         glm::vec2 offset = GridToWorld(node.gridPos);
         auto room = std::make_unique<Room>(node.tmpl, node.gridPos, offset);
-        if (node.type == RoomType::BASIC)
+        if (node.type == RoomType::BASIC || node.type == RoomType::BOSS)
             room->SetIsEnemyRoom(true);
         m_Rooms.push_back(std::move(room));
         m_RoomTypes.push_back(node.type);
@@ -108,6 +108,44 @@ void World::AddToRenderer(Util::Renderer& renderer) {
         room->AddToRenderer(renderer);
     for (auto& corr : m_Corridors)
         corr->AddToRenderer(renderer);
+}
+
+void World::RemoveFromRenderer(Util::Renderer& renderer) {
+    for (auto& room : m_Rooms)
+        room->RemoveFromRenderer(renderer);
+    for (auto& corr : m_Corridors)
+        corr->RemoveFromRenderer(renderer);
+}
+
+// ── Step 4.1/4.2/4.3：層管理查詢 ─────────────────────────────────────────────
+bool World::AllCombatRoomsCleared() const {
+    for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
+        if (m_RoomTypes[i] != RoomType::BASIC) continue;
+        if (!m_Rooms[i]->AreEnemiesSpawned()) return false;
+        if (!m_Rooms[i]->IsCleared())         return false;
+    }
+    return true;
+}
+
+bool World::IsBossCleared() const {
+    for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i) {
+        if (m_RoomTypes[i] != RoomType::BOSS) continue;
+        return m_Rooms[i]->AreEnemiesSpawned() && m_Rooms[i]->IsCleared();
+    }
+    return false;
+}
+
+bool World::HasPortalRoom() const {
+    for (auto t : m_RoomTypes)
+        if (t == RoomType::PORTAL) return true;
+    return false;
+}
+
+glm::vec2 World::GetPortalRoomPos() const {
+    for (int i = 0; i < static_cast<int>(m_Rooms.size()); ++i)
+        if (m_RoomTypes[i] == RoomType::PORTAL)
+            return m_Rooms[i]->GetWorldOffset();
+    return {0.0f, 0.0f};
 }
 
 // ── 每幀更新 ──────────────────────────────────────────────────────────────────

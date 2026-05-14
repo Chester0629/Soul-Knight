@@ -37,6 +37,14 @@ void MiniMap::AddToRenderer(Util::Renderer& root) {
     root.AddChild(m_Cursor);
 }
 
+void MiniMap::RemoveFromRenderer(Util::Renderer& root) {
+    for (auto& obj : m_RoomObjs)
+        root.RemoveChild(obj);
+    if (m_Cursor) root.RemoveChild(m_Cursor);
+    m_RoomObjs.clear();
+    m_GridPos.clear();
+}
+
 void MiniMap::Update(int currentRoomIdx, const std::vector<bool>& visited) {
     for (int i = 0; i < static_cast<int>(m_RoomObjs.size()); ++i)
         m_RoomObjs[i]->SetVisible(i < static_cast<int>(visited.size()) && visited[i]);

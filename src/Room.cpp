@@ -152,6 +152,14 @@ void Room::AddToRenderer(Util::Renderer& renderer) {
         renderer.AddChild(t);
 }
 
+void Room::RemoveFromRenderer(Util::Renderer& renderer) {
+    for (auto& row : m_TileMap)
+        for (auto& tile : row)
+            if (tile) renderer.RemoveChild(tile);
+    for (auto& t : m_BottomFill) renderer.RemoveChild(t);
+    for (auto& t : m_SideFaces)  renderer.RemoveChild(t);
+}
+
 // ── 每幀更新 ──────────────────────────────────────────────────────────────────
 void Room::SyncTransforms(glm::vec2 cameraPos) {
     for (int row = 0; row < m_Rows; ++row)

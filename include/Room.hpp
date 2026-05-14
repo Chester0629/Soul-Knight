@@ -59,6 +59,7 @@ public:
     ~Room() = default;
 
     void AddToRenderer(Util::Renderer& renderer);
+    void RemoveFromRenderer(Util::Renderer& renderer);
     void SyncTransforms(glm::vec2 cameraPos);
 
     // 開門：將指定方向邊牆中央 6 格替換為 DoorTile（Step 3.2 走廊銜接）

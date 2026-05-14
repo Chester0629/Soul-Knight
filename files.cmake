@@ -1,5 +1,6 @@
 set(SRC_FILES
     App.cpp
+    LevelManager.cpp
     Tile.cpp
     Room.cpp
     Entity/Player.cpp
@@ -8,36 +9,45 @@ set(SRC_FILES
     Entity/SpearGoblin.cpp
     Entity/ArcherGoblin.cpp
     Entity/EnemyManager.cpp
+    Entity/Boss.cpp
     World/Camera.cpp
     World/DungeonGenerator.cpp
     World/Corridor.cpp
     World/World.cpp
+    World/Portal.cpp
     System/CollisionSystem.cpp
     Weapon/Bullet.cpp
     Weapon/BulletManager.cpp
     Weapon/Weapon.cpp
     UI/HUD.cpp
     UI/MiniMap.cpp
+    UI/MainMenuUI.cpp
+    UI/CharacterSelectUI.cpp
 )
 
 set(INCLUDE_FILES
     App.hpp
+    LevelManager.hpp
     Tile.hpp
     Room.hpp
     Entity/Entity.hpp
     Entity/Player.hpp
     Entity/Enemy.hpp
     Entity/EnemyManager.hpp
+    Entity/Boss.hpp
     World/Camera.hpp
     World/DungeonGenerator.hpp
     World/Corridor.hpp
     World/World.hpp
+    World/Portal.hpp
     System/CollisionSystem.hpp
     Weapon/Bullet.hpp
     Weapon/BulletManager.hpp
     Weapon/Weapon.hpp
     UI/HUD.hpp
     UI/MiniMap.hpp
+    UI/MainMenuUI.hpp
+    UI/CharacterSelectUI.hpp
 )
 
 set(TEST_FILES

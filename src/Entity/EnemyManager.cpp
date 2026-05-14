@@ -27,14 +27,28 @@ void EnemyManager::Update(float dt) {
     for (auto& e : m_Enemies) {
         if (e->IsDead()) {
             if (!e->IsDying()) {
-                e->StartDying();        // 首次死亡：啟動死亡動畫
+                e->StartDying();
+                ++m_PendingKills;       // 首次死亡計入擊殺數
             } else if (e->IsDeathDone()) {
-                e->SetVisible(false);   // 動畫播完：隱藏
+                e->SetVisible(false);
             }
-            continue;                   // 死亡中不執行 AI
+            continue;
         }
         e->Update(dt);
     }
+}
+
+void EnemyManager::Clear(Util::Renderer& renderer) {
+    for (auto& e : m_Enemies)
+        renderer.RemoveChild(e);
+    m_Enemies.clear();
+    m_PendingKills = 0;
+}
+
+int EnemyManager::TakeKills() {
+    const int k = m_PendingKills;
+    m_PendingKills = 0;
+    return k;
 }
 
 bool EnemyManager::AllDead() const {

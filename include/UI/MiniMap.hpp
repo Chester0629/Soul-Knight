@@ -14,6 +14,7 @@ class MiniMap {
 public:
     void Init(int roomCount, const std::vector<glm::ivec2>& gridPositions);
     void AddToRenderer(Util::Renderer& root);
+    void RemoveFromRenderer(Util::Renderer& root);
     void Update(int currentRoomIdx, const std::vector<bool>& visited);
 
     static constexpr float Z_MAP = 99.45f;

@@ -33,6 +33,9 @@ public:
     // 將全部 100 顆 Bullet GameObject 加入渲染樹（App::Start 呼叫一次）
     void AddToRenderer(Util::Renderer& root);
 
+    // Step 4.4：停用所有活躍子彈（樓層切換/重開時清場用，不移除出 Renderer）
+    void Reset();
+
     const std::vector<std::shared_ptr<Bullet>>& GetBullets() const { return m_Bullets; }
 
     static constexpr int   MAX_BULLETS  = 100;

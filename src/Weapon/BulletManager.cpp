@@ -103,3 +103,8 @@ void BulletManager::AddToRenderer(Util::Renderer& root) {
     for (auto& b : m_Bullets)
         root.AddChild(b);
 }
+
+void BulletManager::Reset() {
+    for (auto& b : m_Bullets)
+        if (b->m_Active) Deactivate(b.get());
+}

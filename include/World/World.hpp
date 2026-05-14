@@ -22,6 +22,7 @@ class World {
 public:
     void Generate(unsigned seed, int floorIndex = 1);
     void AddToRenderer(Util::Renderer& renderer);
+    void RemoveFromRenderer(Util::Renderer& renderer);
     void SyncTransforms(glm::vec2 cameraPos);
 
     // Step 3.3：每幀驅動門的狀態（進房關門、敵人全清 → 開門）
@@ -53,6 +54,12 @@ public:
     int            GetRoomCount()       const { return static_cast<int>(m_Rooms.size()); }
     glm::ivec2     GetRoomGridPos(int i) const { return m_Rooms[i]->GetGridPos(); }
     bool           IsRoomVisited(int i)  const { return m_Rooms[i]->IsVisited(); }
+
+    // Step 4.1/4.2/4.3：層管理輔助
+    bool      AllCombatRoomsCleared() const;   // 所有 BASIC 房間已生成且清空
+    bool      IsBossCleared()         const;   // BOSS 房間已生成且清空
+    bool      HasPortalRoom()         const;   // 是否有 PORTAL 房間（普通層）
+    glm::vec2 GetPortalRoomPos()      const;   // PORTAL 房間中心世界座標
 
     // 敵人生成輔助
     RoomType   GetRoomType(int i)          const { return m_RoomTypes[i]; }

@@ -45,6 +45,7 @@ public:
     int       GetMaxEnergy()   const { return m_MaxEnergy; }
 
     void AddWeaponSpriteToRenderer(Util::Renderer& root);
+    void RemoveWeaponSpriteFromRenderer(Util::Renderer& root);
 
 private:
     void HandleInput(float dt);

@@ -1,13 +1,13 @@
 # progress.md — 開發進度追蹤
 > Soul Knight (OOP 2025 期末專案)
-> 版本: 1.4 | 最後更新: 2026-03-21
+> 版本: 1.5 | 最後更新: 2026-05-15
 
 ---
 
 ## 當前狀態
 
-- **目前里程碑**: M3 進行中
-- **下一步**: **M3 Step 3.4 迷你地圖**
+- **目前里程碑**: M5（部分）— u1 State Machine ✅、u2 MainMenuUI ✅、u3 CharacterSelectUI ✅
+- **下一步**: **M5 升級室 (u4)、End Screen 整合**
 
 ---
 
@@ -60,10 +60,10 @@
 
 | Step | 狀態 | 說明 |
 |------|------|------|
-| 4.1 LevelManager（分層） | ⬜ 待做 | 4 層普通 + 1 層 Boss（共 5 層） |
-| 4.2 傳送陣 | ⬜ 待做 | effect04_5-12.png，所有房間清空後出現 |
-| 4.3 Boss | ⬜ 待做 | boss08，Phase 1 扇形彈幕 + Phase 2 衝刺 |
-| 4.4 Roguelike 重開機制 | ⬜ 待做 | 死亡→GameOver→主選單，完整重置 |
+| 4.1 LevelManager（分層） | ✅ 完成 | LevelManager class，Floor 1~5；BOSS 房間標記為 enemy room |
+| 4.2 傳送陣 | ✅ 完成 | Portal class；effect04_5-12.png 8幀循環；AllCombatRoomsCleared() 後出現 |
+| 4.3 Boss | ✅ 完成 | Boss class；boss08 8幀動畫；Phase1 扇形5彈/Phase2 衝刺+7彈；IsBossCleared()→Victory |
+| 4.4 Roguelike 重開機制 | ✅ 完成 | GAME_OVER/VICTORY state；Overlay Text；R 鍵重開；完整 Cleanup+InitFloor |
 
 ---
 
@@ -71,14 +71,50 @@
 
 | Step | 狀態 | 說明 |
 |------|------|------|
-| 5.1 主選單 | ⬜ 待做 | 開始遊戲、退出、設定 |
-| 5.2 角色選擇介面 | ⬜ 待做 | c01雙持、c02翻滾、c03法陣 |
-| 5.3 角色升級室 | ⬜ 待做 | 選角後進入，依關卡數給資源 |
-| 5.4 過關/死亡畫面 | ⬜ 待做 | 顯示層數、擊殺數統計 |
+| u1 State Machine 擴充 | ✅ 完成 | START→MAIN_MENU→CHARACTER_SELECT→UPGRADE→UPDATE；App::Start() 清理舊 World |
+| u2 主選單 (MainMenuUI) | ✅ 完成 | Phase1 背景(biaoti_01)；Phase2 Title logo + New Game(ui_118) + Multiplayer(灰) |
+| u3 角色選擇 (CharacterSelectUI) | ✅ 完成 | 三角色 stats + idle 動畫 + 技能說明 + 升級按鈕(500晶石)；D/A 切換；ESC 返回 |
+| u4 升級室 | ⬜ 待做 | 選角後進入，依關卡數給資源（placeholder 直接進遊戲） |
+| u5 End Screen 整合 | ⬜ 待做 | GameOver/Victory 已有 Overlay；完整統計頁面待做 |
 
 ---
 
 ## 開發日誌
+
+### 2026-05-15（M5 u1~u3：State Machine + MainMenuUI + CharacterSelectUI）
+
+- ✅ **State Machine 擴充**
+  - 新增 `MAIN_MENU / CHARACTER_SELECT / UPGRADE` 狀態
+  - `App::Start()` 移至主選單流程，先清理舊 World (`Cleanup()` + `HideOverlay()`)
+  - `main.cpp` 加入 `AllowSetForegroundWindow(ASFW_ANY)`（允許自動化測試腳本注入焦點）
+
+- ✅ **MainMenuUI** (`include/UI/MainMenuUI.hpp` + `src/UI/MainMenuUI.cpp`)
+  - Phase 1：`biaoti_01.png` 暗黑地城背景，任意鍵進入 Phase 2
+  - Phase 2：Title logo (biaoti02/03/05/biaoti_02) + New Game 按鈕 (ui_118，黃金) + Multiplayer (ui_btn1，灰化禁用)
+  - J 鍵 / ENTER / 滑鼠左鍵確認開始遊戲；ESC 退出
+
+- ✅ **CharacterSelectUI** (`include/UI/CharacterSelectUI.hpp` + `src/UI/CharacterSelectUI.cpp`)
+  - 三角色 (Knight/Rogue/Wizard)，各自 idle 動畫 (c01_4~7 / c02_4~7 / c03_4~7，150ms)
+  - 四項 stats 面板：HP / Shield / Energy / 暴擊率；升級後即時更新
+  - 技能說明：Dual Wield / Dodge Roll / Magic Circle + 對應 ui_skill01~03 圖示
+  - 難度星級：★★☆☆☆ / ★★★☆☆ / ★★★★★
+  - 升級按鈕：可升(ui_28黃金) / 晶石不足(ui_btn1灰) / 已升級(ui_btn1灰)；費用 500 晶石
+  - A/D 切換角色；ESC 返回主選單；ENTER/J 確認進入 UPGRADE
+
+- 🐛 **踩坑：`Util::GameObject` 無 `SetColor()` 方法**
+  - 灰化效果必須透過換底圖素材實現（用 ui_btn1.png 取代 ui_28.png）
+  - `Util::Text::SetColor()` 有效，灰字可用此方法
+
+- 🐛 **踩坑：PostMessage WM_KEYDOWN lParam 必須含 scan code**
+  - SDL2 `WindowsScanCodeToSDLScanCode()` 使用 `(lParam >> 16) & 0xFF` 取 scan code
+  - 若 lParam = 1，scan code = 0 → `SDL_SCANCODE_UNKNOWN` → key event **靜默丟棄**
+  - 正確做法：`$scan = MapVirtualKey($vk, 0); $lp = 1 | ($scan << 16)`
+  - SDL2 **不需要** window 有 OS keyboard focus 即可接收 WM_KEYDOWN（focus 問題是假議題）
+
+- ✅ **Runtime 驗收截圖** (sf_01~09 系列，`D:\Soul Knight\project\sf_*.png`)
+  - Phase1 / Phase2 主選單 / c01~c03 stats / 升級後數值更新 / 晶石不足禁用 全部通過
+
+---
 
 ### 2026-04-17（Step 3.4 + 3.5）
 - ✅ Step 3.4 迷你地圖完成
@@ -261,6 +297,10 @@
 | 房間切換觸發 | World 每幀比對玩家 WorldPos 與所有 Room AABB | ✅ 已定案 |
 | 迷你地圖渲染 | 每個 Room 對應一個 GameObject，SetVisible 控制顯示 | ✅ 已定案 |
 | 敵人生成時機 | **懶生成**：玩家進入縮小 AABB 才生成，不在 Start() 預生成 | ✅ 已定案（3.5）|
+| UI 灰化方法 | GameObject 無 SetColor；灰化用換素材（ui_btn1 取代 ui_28），文字灰化用 Text::SetColor() | ✅ 已定案（M5）|
+| PostMessage scan code | lParam 必須含 MapVirtualKey(vk,0) 取得的 scan code；SDL2 不需 OS focus 即可接收 WM_KEYDOWN | ✅ 已確認（M5）|
+| 晶石初始值 | m_Crystals = 0（測試時暫用 500，正式為 0；晶石靠遊戲中獲得） | ✅ 已定案（M5）|
+| 角色升級費用 | 每個角色固定 500 晶石；升級後永久保留（跨局 bool m_CXXUpgraded） | ✅ 已定案（M5）|
 | 門初始狀態 | **預設開**（OpenForEntry，不設 m_DoorsOpened）；進入後 LockDoors | ✅ 已定案（3.5）|
 | 房間進入偵測 | **雙層 AABB**：標準大小→SetVisited/地圖；縮小2格→生成+LockDoors | ✅ 已定案（3.5）|
 | IsCleared() 語意陷阱 | 空 m_Enemies 也回傳 true；生成前必須先查 AreEnemiesSpawned() | ✅ 已確認（3.5）|
